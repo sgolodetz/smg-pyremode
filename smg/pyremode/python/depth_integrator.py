@@ -17,7 +17,7 @@ class DepthIntegrator:
     # CONSTRUCTOR
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
-                 min_depth: float, max_depth: float):
+                 min_depth: float = 0.1, max_depth: float = 4.0):
         """
         TODO
 
@@ -31,7 +31,7 @@ class DepthIntegrator:
         self.__image_size: Tuple[int, int] = image_size
         self.__input_image: Optional[np.ndarray] = None
         self.__input_is_ready: bool = False
-        self.__input_is_reference: bool = False
+        self.__input_is_keyframe: bool = False
         self.__input_pose: Optional[np.ndarray] = None
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
         self.__output_is_ready: bool = False
@@ -69,20 +69,21 @@ class DepthIntegrator:
             self.__output_is_ready = False
 
             # TODO
-            return self.__reference_image, self.__reference_pose, self.__estimated_depth_image, self.__convergence_map
+            return self.__reference_image, self.__reference_pose, \
+                self.__estimated_depth_image.copy(), self.__convergence_map.copy()
 
-    def put(self, input_image: np.ndarray, input_pose: np.ndarray, input_is_reference: bool) -> None:
+    def put(self, input_image: np.ndarray, input_pose: np.ndarray, is_keyframe: bool) -> None:
         """
         TODO
 
-        :param input_image:         TODO
-        :param input_pose:          TODO
-        :param input_is_reference:  TODO
+        :param input_image:     TODO
+        :param input_pose:      TODO
+        :param is_keyframe:     TODO
         """
         acquired: bool = self.__put_lock.acquire(blocking=False)
         if acquired:
             self.__input_image = input_image
-            self.__input_is_reference = input_is_reference
+            self.__input_is_keyframe = is_keyframe
             self.__input_pose = input_pose
 
             self.__input_is_ready = True
@@ -93,9 +94,9 @@ class DepthIntegrator:
 
     def __integrate_images(self) -> None:
         """TODO"""
-        while not self.__should_terminate:
-            depthmap: Optional[pyremode.Depthmap] = None
+        depthmap: Optional[pyremode.Depthmap] = None
 
+        while not self.__should_terminate:
             with self.__put_lock:
                 # TODO
                 while not self.__input_is_ready:
@@ -106,26 +107,26 @@ class DepthIntegrator:
                     return
 
                 # TODO
-                integration_image: np.ndarray = self.__input_image
-                integration_is_reference: bool = self.__input_is_reference
-                integration_pose: np.ndarray = self.__input_pose
+                integrand_image: np.ndarray = self.__input_image
+                integrand_is_keyframe: bool = self.__input_is_keyframe
+                integrand_pose: np.ndarray = self.__input_pose
                 self.__input_is_ready = False
 
             # TODO
-            grey_image: np.ndarray = cv2.cvtColor(integration_image, cv2.COLOR_BGR2GRAY)
+            grey_image: np.ndarray = cv2.cvtColor(integrand_image, cv2.COLOR_BGR2GRAY)
             cv_grey_image: pyopencv.CVMat1b = pyopencv.CVMat1b.zeros(*grey_image.shape[:2])
             np.copyto(np.array(cv_grey_image, copy=False), grey_image)
 
             # TODO
-            r: Rotation = Rotation.from_matrix(integration_pose[0:3, 0:3])
-            t: np.ndarray = integration_pose[0:3, 3]
+            r: Rotation = Rotation.from_matrix(integrand_pose[0:3, 0:3])
+            t: np.ndarray = integrand_pose[0:3, 3]
             qx, qy, qz, qw = r.as_quat()
             se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
 
             # TODO
-            if integration_is_reference:
-                self.__reference_image = integration_image
-                self.__reference_pose = integration_pose
+            if integrand_is_keyframe:
+                self.__reference_image = integrand_image
+                self.__reference_pose = integrand_pose
                 width, height = self.__image_size
                 fx, fy, cx, cy = self.__intrinsics
                 depthmap = pyremode.Depthmap(width, height, fx, cx, fy, cy)

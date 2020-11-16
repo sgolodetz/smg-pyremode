@@ -10,7 +10,7 @@ from smg.geometry import GeometryUtil
 from smg.openni.openni_camera import OpenNICamera
 from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, Depthmap, SE3f
+from smg.pyremode import CONVERGED, DepthIntegrator, Depthmap, SE3f
 
 
 def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
@@ -46,9 +46,8 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             intrinsics: Tuple[float, float, float, float] = camera.get_colour_intrinsics()
-            fx, fy, cx, cy = intrinsics
-            depthmap: Depthmap = Depthmap(*camera.get_colour_dims(), fx, cx, fy, cy)
-            reference_colour_image: Optional[np.ndarray] = None
+            integrator: DepthIntegrator = DepthIntegrator(camera.get_colour_dims(), intrinsics)
+            is_keyframe: bool = True
             reference_depth_image: Optional[np.ndarray] = None
 
             _, ax = plt.subplots(2, 2)
@@ -64,27 +63,12 @@ def main():
                 if pose is None:
                     continue
 
-                r: Rotation = Rotation.from_matrix(pose[0:3, 0:3])
-                t: np.ndarray = pose[0:3, 3]
-                qx, qy, qz, qw = r.as_quat()
-                se3: SE3f = SE3f(qw, qx, qy, qz, *t)
-
-                print_se3(se3)
-
-                grey_image: np.ndarray = cv2.cvtColor(colour_image, cv2.COLOR_BGR2GRAY)
-                cv_grey_image: CVMat1b = CVMat1b.zeros(*grey_image.shape[:2])
-                np.copyto(np.array(cv_grey_image, copy=False), grey_image)
-
-                if reference_colour_image is None:
-                    reference_colour_image = colour_image
+                integrator.put(colour_image, pose, is_keyframe=is_keyframe)
+                if is_keyframe:
                     reference_depth_image = depth_image
-                    depthmap.set_reference_image(cv_grey_image, se3, 0.1, 4.0)
-                else:
-                    depthmap.update(cv_grey_image, se3)
-                    print(depthmap.get_converged_percentage())
+                    is_keyframe = False
 
-                estimated_depth_image: np.ndarray = np.array(depthmap.get_denoised_depthmap(), dtype=np.float32)
-                GeometryUtil.make_depths_orthogonal(estimated_depth_image, intrinsics)
+                reference_colour_image, reference_pose, estimated_depth_image, convergence_map = integrator.get()
 
                 ax[0, 0].clear()
                 ax[0, 1].clear()
