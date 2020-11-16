@@ -101,10 +101,10 @@ def main():
 
             cv2.destroyAllWindows()
 
-            # depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
+            depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
 
-            convergence_map: np.ndarray = np.array(depthmap.get_convergence_map(), copy=False)
-            depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
+            # convergence_map: np.ndarray = np.array(depthmap.get_convergence_map(), copy=False)
+            # depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
 
             pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
                 reference_colour_image, estimated_depth_image, depth_mask, intrinsics
@@ -116,8 +116,8 @@ def main():
             pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
 
             # Denoise the point cloud (slow).
-            pcd = pcd.uniform_down_sample(every_k_points=5)
-            pcd, _ = pcd.remove_radius_outlier(64, 0.05)
+            # pcd = pcd.uniform_down_sample(every_k_points=5)
+            # pcd, _ = pcd.remove_radius_outlier(64, 0.05)
 
             # Set up the visualisation.
             vis = o3d.visualization.Visualizer()
