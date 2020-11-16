@@ -31,7 +31,7 @@ class DepthIntegrator:
         self.__image_size: Tuple[int, int] = image_size
         self.__input_image: Optional[np.ndarray] = None
         self.__input_is_ready: bool = False
-        self.__input_is_keyframe: bool = False
+        self.__input_is_keyframe: bool = True
         self.__input_pose: Optional[np.ndarray] = None
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
         self.__output_is_ready: bool = False
@@ -54,36 +54,40 @@ class DepthIntegrator:
 
     # PUBLIC METHODS
 
-    def get(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         TODO
 
         :return:    TODO
         """
-        with self.__get_lock:
-            # TODO
-            while not self.__output_is_ready:
-                self.__output_ready.wait(0.1)
+        acquired: bool = self.__get_lock.acquire(blocking=False)
+        if acquired:
+            try:
+                # TODO
+                if not self.__output_is_ready:
+                    return None
 
-            # TODO
-            self.__output_is_ready = False
+                # TODO
+                self.__output_is_ready = False
 
-            # TODO
-            return self.__reference_image, self.__reference_pose, \
-                self.__estimated_depth_image.copy(), self.__convergence_map.copy()
+                # TODO
+                return self.__reference_image, self.__reference_pose, \
+                    self.__estimated_depth_image.copy(), self.__convergence_map.copy()
+            finally:
+                self.__get_lock.release()
+        else:
+            return None
 
-    def put(self, input_image: np.ndarray, input_pose: np.ndarray, is_keyframe: bool) -> None:
+    def put(self, input_image: np.ndarray, input_pose: np.ndarray) -> None:
         """
         TODO
 
         :param input_image:     TODO
         :param input_pose:      TODO
-        :param is_keyframe:     TODO
         """
         acquired: bool = self.__put_lock.acquire(blocking=False)
         if acquired:
             self.__input_image = input_image
-            self.__input_is_keyframe = is_keyframe
             self.__input_pose = input_pose
 
             self.__input_is_ready = True
@@ -108,7 +112,6 @@ class DepthIntegrator:
 
                 # TODO
                 integrand_image: np.ndarray = self.__input_image
-                integrand_is_keyframe: bool = self.__input_is_keyframe
                 integrand_pose: np.ndarray = self.__input_pose
                 self.__input_is_ready = False
 
@@ -124,9 +127,10 @@ class DepthIntegrator:
             se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
 
             # TODO
-            if integrand_is_keyframe:
+            if self.__input_is_keyframe:
                 self.__reference_image = integrand_image
                 self.__reference_pose = integrand_pose
+                self.__input_is_keyframe = False
                 width, height = self.__image_size
                 fx, fy, cx, cy = self.__intrinsics
                 depthmap = pyremode.Depthmap(width, height, fx, cx, fy, cy)

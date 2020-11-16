@@ -3,14 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 
-from scipy.spatial.transform import Rotation
 from typing import Optional, Tuple
 
 from smg.geometry import GeometryUtil
 from smg.openni.openni_camera import OpenNICamera
-from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, DepthIntegrator, Depthmap, SE3f
+from smg.pyremode import CONVERGED, DepthIntegrator
 
 
 def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
@@ -30,13 +28,6 @@ def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
     axes.transform(pose)
     # noinspection PyTypeChecker
     vis.add_geometry(axes)
-
-
-def print_se3(se3: SE3f) -> None:
-    print()
-    for row in range(3):
-        print([se3.data(row, col) for col in range(4)])
-    print()
 
 
 def main():
