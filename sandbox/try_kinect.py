@@ -8,9 +8,9 @@ from typing import Optional, Tuple
 
 from smg.geometry import GeometryUtil
 from smg.openni.openni_camera import OpenNICamera
+from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import RGBDTracker
-
-from pyremode import *
+from smg.pyremode import CONVERGED, Depthmap, SE3f
 
 
 def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
