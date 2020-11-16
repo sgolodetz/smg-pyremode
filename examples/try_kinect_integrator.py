@@ -77,22 +77,18 @@ def main():
                 ax[1, 0].imshow(colour_image[:, :, [2, 1, 0]])
                 ax[1, 1].imshow(reference_depth_image, vmin=0.0, vmax=4.0)
 
-                cv2.imshow("Reference Colour Image", reference_colour_image)
-                c: int = cv2.waitKey(1)
-                if c == ord('q') and convergence_map is not None:
-                    break
-
-                # plt.draw()
-                # if plt.waitforbuttonpress(0.001):
+                # cv2.imshow("Reference Colour Image", reference_colour_image)
+                # c: int = cv2.waitKey(1)
+                # if c == ord('q') and convergence_map is not None:
                 #     break
+
+                plt.draw()
+                if plt.waitforbuttonpress(0.001):
+                    break
 
             cv2.destroyAllWindows()
 
-            # depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
-
-            # convergence_map: np.ndarray = np.array(depthmap.get_convergence_map(), copy=False)
             depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
-
             pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
                 reference_colour_image, estimated_depth_image, depth_mask, intrinsics
             )
@@ -104,8 +100,6 @@ def main():
 
             # Denoise the point cloud (slow).
             pcd = pcd.uniform_down_sample(every_k_points=5)
-            # pcd, _ = pcd.remove_radius_outlier(64, 0.05)
-            # pcd, _ = pcd.remove_radius_outlier(64, 0.05)
             pcd, _ = pcd.remove_statistical_outlier(20, 2.0)
 
             # Set up the visualisation.
