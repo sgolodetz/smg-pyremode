@@ -5,6 +5,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from typing import Optional
 
+from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import MonocularTracker
 from smg.rotory.drone_factory import DroneFactory
 

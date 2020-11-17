@@ -119,46 +119,55 @@ class DepthAssembler:
     # PRIVATE METHODS
 
     def __assemble_depth_image(self) -> None:
-        """TODO"""
+        """Assemble the depth image from any input images and poses that are passed to the assembler."""
         depthmap: Optional[pyremode.Depthmap] = None
 
+        # Until the assembler is told to terminate:
         while not self.__should_terminate:
             with self.__put_lock:
-                # TODO
+                # Wait for a new input image and pose.
                 while not self.__input_is_ready:
                     self.__input_ready.wait(0.1)
+
+                    # If the assembler is told to terminate whilst waiting for inputs, early out.
                     if self.__should_terminate:
                         return
 
-                # TODO
-                assembly_image: np.ndarray = self.__input_image
-                assembly_pose: np.ndarray = self.__input_pose
+                # Make local references to the inputs so that we can release the lock as soon as possible.
+                input_image: np.ndarray = self.__input_image
+                input_pose: np.ndarray = self.__input_pose
                 self.__input_is_ready = False
 
-            # TODO
-            grey_image: np.ndarray = cv2.cvtColor(assembly_image, cv2.COLOR_BGR2GRAY)
+            # Convert the input image to greyscale.
+            grey_image: np.ndarray = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
             cv_grey_image: pyopencv.CVMat1b = pyopencv.CVMat1b.zeros(*grey_image.shape[:2])
             np.copyto(np.array(cv_grey_image, copy=False), grey_image)
 
-            # TODO
-            r: Rotation = Rotation.from_matrix(assembly_pose[0:3, 0:3])
-            t: np.ndarray = assembly_pose[0:3, 3]
+            # Convert the input pose into a quaternion + vector form that can be passed to REMODE.
+            r: Rotation = Rotation.from_matrix(input_pose[0:3, 0:3])
+            t: np.ndarray = input_pose[0:3, 3]
             qx, qy, qz, qw = r.as_quat()
             se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
 
-            # TODO
+            # If this input image and pose are the keyframe:
             if self.__input_is_keyframe:
-                self.__reference_image = assembly_image
-                self.__reference_pose = assembly_pose
+                # Store them for later.
+                self.__reference_image = input_image
+                self.__reference_pose = input_pose
+
+                # Ensure that no future input is treated as the keyframe.
                 self.__input_is_keyframe = False
+
+                # Make the initial REMODE depthmap, setting the input image as its reference image.
                 width, height = self.__image_size
                 fx, fy, cx, cy = self.__intrinsics
                 depthmap = pyremode.Depthmap(width, height, fx, cx, fy, cy)
                 depthmap.set_reference_image(cv_grey_image, se3, self.__min_depth, self.__max_depth)
             else:
+                # Otherwise, use the inputs to update the existing REMODE depthmap.
                 depthmap.update(cv_grey_image, se3)
 
-            # TODO
+            # Update the output convergence map and estimated depth image, and signal that they're ready.
             with self.__get_lock:
                 self.__convergence_map = np.array(depthmap.get_convergence_map(), copy=False)
                 self.__estimated_depth_image = np.array(depthmap.get_denoised_depthmap(), copy=False)
