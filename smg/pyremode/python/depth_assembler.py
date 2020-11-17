@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 from smg.geometry import GeometryUtil
 
 
-class DepthIntegrator:
+class DepthAssembler:
     """TODO"""
 
     # CONSTRUCTOR
@@ -48,24 +48,31 @@ class DepthIntegrator:
         self.__input_ready = threading.Condition(self.__put_lock)
         self.__output_ready = threading.Condition(self.__get_lock)
 
-        # Start the threads.
-        self.__integration_thread = threading.Thread(target=self.__integrate_images)
-        self.__integration_thread.start()
+        # Start the assembly thread.
+        self.__assembly_thread = threading.Thread(target=self.__assemble_depth_image)
+        self.__assembly_thread.start()
 
     # PUBLIC METHODS
 
-    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    def get(self, *, blocking: bool) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         TODO
 
-        :return:    TODO
+        :param blocking:    TODO
+        :return:            TODO
         """
-        acquired: bool = self.__get_lock.acquire(blocking=False)
+        acquired: bool = self.__get_lock.acquire(blocking=blocking)
         if acquired:
             try:
                 # TODO
-                if not self.__output_is_ready:
-                    return None
+                if blocking:
+                    while not self.__output_is_ready:
+                        self.__output_ready.wait(0.1)
+                        if self.__should_terminate:
+                            return None
+                else:
+                    if not self.__output_is_ready:
+                        return None
 
                 # TODO
                 self.__output_is_ready = False
@@ -78,14 +85,15 @@ class DepthIntegrator:
         else:
             return None
 
-    def put(self, input_image: np.ndarray, input_pose: np.ndarray) -> None:
+    def put(self, input_image: np.ndarray, input_pose: np.ndarray, *, blocking: bool) -> None:
         """
         TODO
 
         :param input_image:     TODO
         :param input_pose:      TODO
+        :param blocking:        TODO
         """
-        acquired: bool = self.__put_lock.acquire(blocking=False)
+        acquired: bool = self.__put_lock.acquire(blocking=blocking)
         if acquired:
             self.__input_image = input_image
             self.__input_pose = input_pose
@@ -94,9 +102,13 @@ class DepthIntegrator:
             self.__input_ready.notify()
             self.__put_lock.release()
 
+    def terminate(self) -> None:
+        """TODO"""
+        self.__should_terminate = True
+
     # PRIVATE METHODS
 
-    def __integrate_images(self) -> None:
+    def __assemble_depth_image(self) -> None:
         """TODO"""
         depthmap: Optional[pyremode.Depthmap] = None
 
@@ -111,25 +123,25 @@ class DepthIntegrator:
                     return
 
                 # TODO
-                integrand_image: np.ndarray = self.__input_image
-                integrand_pose: np.ndarray = self.__input_pose
+                assembly_image: np.ndarray = self.__input_image
+                assembly_pose: np.ndarray = self.__input_pose
                 self.__input_is_ready = False
 
             # TODO
-            grey_image: np.ndarray = cv2.cvtColor(integrand_image, cv2.COLOR_BGR2GRAY)
+            grey_image: np.ndarray = cv2.cvtColor(assembly_image, cv2.COLOR_BGR2GRAY)
             cv_grey_image: pyopencv.CVMat1b = pyopencv.CVMat1b.zeros(*grey_image.shape[:2])
             np.copyto(np.array(cv_grey_image, copy=False), grey_image)
 
             # TODO
-            r: Rotation = Rotation.from_matrix(integrand_pose[0:3, 0:3])
-            t: np.ndarray = integrand_pose[0:3, 3]
+            r: Rotation = Rotation.from_matrix(assembly_pose[0:3, 0:3])
+            t: np.ndarray = assembly_pose[0:3, 3]
             qx, qy, qz, qw = r.as_quat()
             se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
 
             # TODO
             if self.__input_is_keyframe:
-                self.__reference_image = integrand_image
-                self.__reference_pose = integrand_pose
+                self.__reference_image = assembly_image
+                self.__reference_pose = assembly_pose
                 self.__input_is_keyframe = False
                 width, height = self.__image_size
                 fx, fy, cx, cy = self.__intrinsics

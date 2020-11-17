@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from smg.geometry import GeometryUtil
 from smg.openni.openni_camera import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, DepthIntegrator
+from smg.pyremode import CONVERGED, DepthAssembler
 
 
 def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
@@ -37,7 +37,7 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             intrinsics: Tuple[float, float, float, float] = camera.get_colour_intrinsics()
-            integrator: DepthIntegrator = DepthIntegrator(camera.get_colour_dims(), intrinsics)
+            depth_assembler: DepthAssembler = DepthAssembler(camera.get_colour_dims(), intrinsics)
             is_keyframe: bool = True
             reference_colour_image: Optional[np.ndarray] = None
             reference_depth_image: Optional[np.ndarray] = None
@@ -57,13 +57,13 @@ def main():
                 if pose is None:
                     continue
 
-                integrator.put(colour_image, pose)
+                depth_assembler.put(colour_image, pose, blocking=False)
                 if is_keyframe:
                     reference_colour_image = colour_image
                     reference_depth_image = depth_image
                     is_keyframe = False
 
-                result = integrator.get()
+                result = depth_assembler.get(blocking=False)
                 if result is not None:
                     _, _, estimated_depth_image, convergence_map = result
 
