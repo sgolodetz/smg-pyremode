@@ -12,19 +12,19 @@ from smg.geometry import GeometryUtil
 
 
 class DepthAssembler:
-    """TODO"""
+    """Used to assemble a depth image over time from multiple colour images with known poses."""
 
     # CONSTRUCTOR
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
                  min_depth: float = 0.1, max_depth: float = 4.0):
         """
-        TODO
+        Construct a depth assembler.
 
-        :param image_size:  TODO
-        :param intrinsics:  TODO
-        :param min_depth:   TODO
-        :param max_depth:   TODO
+        :param image_size:  The image size, as a (width, height) tuple.
+        :param intrinsics:  The camera intrinsics.
+        :param min_depth:   An estimate of the lower bound of the depths present in the scene.
+        :param max_depth:   An estimate of the upper bound of the depths present in the scene.
         """
         self.__convergence_map: Optional[np.ndarray] = None
         self.__estimated_depth_image: Optional[np.ndarray] = None
@@ -87,12 +87,22 @@ class DepthAssembler:
 
     def put(self, input_image: np.ndarray, input_pose: np.ndarray, *, blocking: bool) -> None:
         """
-        TODO
+        Try to add an image with a known pose to the depth assembler.
 
-        :param input_image:     TODO
-        :param input_pose:      TODO
-        :param blocking:        TODO
+        .. note::
+            It normally makes sense to set blocking to False, since the rate at which images
+            arrive from the camera will generally be higher than the rate at which they can
+            be processed. If blocking is set to False, the depth assembler will naturally be
+            fed images at the rate at which it can process them, rather than having to keep
+            a queue of images to process in the future. However, there may be times when we
+            want to ensure that every single image passed to the assembler is processed, in
+            which blocking can be set to True to arrange this.
+
+        :param input_image:     The image.
+        :param input_pose:      The camera pose when the image was captured.
+        :param blocking:        Whether or not to block until the image is successfully added.
         """
+        # FIXME: If blocking is True, this can block forever, even if the assembler has been told to terminate.
         acquired: bool = self.__put_lock.acquire(blocking=blocking)
         if acquired:
             self.__input_image = input_image
@@ -103,7 +113,7 @@ class DepthAssembler:
             self.__put_lock.release()
 
     def terminate(self) -> None:
-        """TODO"""
+        """Tell the depth assembler to terminate."""
         self.__should_terminate = True
 
     # PRIVATE METHODS
