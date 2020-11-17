@@ -36,6 +36,16 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         self.__lock = threading.Lock()
         self.__keyframe_ready = threading.Condition(self.__lock)
 
+    # SPECIAL METHODS
+
+    def __enter__(self):
+        """TODO"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """TODO"""
+        self.terminate()
+
     # PUBLIC METHODS
 
     def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
@@ -87,8 +97,9 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
     def terminate(self) -> None:
         """TODO"""
         with self.__lock:
-            self.__should_terminate = True
-            if self.__front_assembler:
-                self.__front_assembler.terminate()
-            if self.__back_assembler:
-                self.__back_assembler.terminate()
+            if not self.__should_terminate:
+                self.__should_terminate = True
+                if self.__front_assembler is not None:
+                    self.__front_assembler.terminate()
+                if self.__back_assembler is not None:
+                    self.__back_assembler.terminate()

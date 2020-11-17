@@ -21,8 +21,8 @@ def main():
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
                 camera.get_colour_dims(), camera.get_colour_intrinsics()
             )
-            system: KinectMappingSystem = KinectMappingSystem(camera, depth_estimator, tracker)
-            system.run()
+            with KinectMappingSystem(camera, depth_estimator, tracker) as system:
+                system.run()
 
 
 if __name__ == "__main__":

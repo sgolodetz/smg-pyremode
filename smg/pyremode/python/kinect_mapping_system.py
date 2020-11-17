@@ -28,6 +28,16 @@ class KinectMappingSystem:
 
         self.__mapping_thread = threading.Thread(target=self.__run_mapping)
 
+    # SPECIAL METHODS
+
+    def __enter__(self):
+        """TODO"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """TODO"""
+        self.terminate()
+
     # PUBLIC METHODS
 
     def run(self) -> None:
@@ -40,7 +50,6 @@ class KinectMappingSystem:
             cv2.imshow("Tracking Image", colour_image)
             c: int = cv2.waitKey(1)
             if c == ord('q'):
-                self.terminate()
                 return
 
             # TODO
@@ -55,9 +64,10 @@ class KinectMappingSystem:
 
     def terminate(self) -> None:
         """TODO"""
-        self.__should_terminate = True
-        self.__depth_estimator.terminate()
-        self.__mapping_thread.join()
+        if not self.__should_terminate:
+            self.__should_terminate = True
+            self.__depth_estimator.terminate()
+            self.__mapping_thread.join()
 
     # PRIVATE METHODS
 
