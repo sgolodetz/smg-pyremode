@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import threading
 
@@ -61,5 +62,20 @@ class KinectMappingSystem:
 
     def __run_mapping(self) -> None:
         """TODO"""
+        _, ax = plt.subplots(1, 3)
         while not self.__should_terminate:
-            pass
+            # TODO
+            result = self.__depth_estimator.get()
+            if result is not None:
+                reference_image, reference_pose, estimated_depth_image, convergence_map = result
+
+                # TEMPORARY
+                ax[0].clear()
+                ax[1].clear()
+                ax[2].clear()
+                ax[0].imshow(reference_image[:, :, [2, 1, 0]])
+                ax[1].imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
+                ax[2].imshow(convergence_map)
+
+                plt.draw()
+                plt.waitforbuttonpress(0.001)
