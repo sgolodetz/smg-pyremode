@@ -1,0 +1,65 @@
+import cv2
+import numpy as np
+import threading
+
+from typing import Optional
+
+from smg.openni.openni_camera import OpenNICamera
+from smg.pyorbslam2 import RGBDTracker
+from smg.pyremode import DepthEstimator
+
+
+class KinectMappingSystem:
+    """TODO"""
+
+    # CONSTRUCTOR
+
+    def __init__(self, camera: OpenNICamera, depth_estimator: DepthEstimator, tracker: RGBDTracker):
+        """
+        TODO
+
+        :param depth_estimator:     TODO
+        """
+        self.__camera: OpenNICamera = camera
+        self.__depth_estimator: DepthEstimator = depth_estimator
+        self.__should_terminate: bool = False
+        self.__tracker: RGBDTracker = tracker
+
+        self.__mapping_thread = threading.Thread(target=self.__run_mapping)
+
+    # PUBLIC METHODS
+
+    def run(self) -> None:
+        """TODO"""
+        self.__mapping_thread.start()
+
+        while not self.__should_terminate:
+            # TODO
+            colour_image, depth_image = self.__camera.get_images()
+            cv2.imshow("Tracking Image", colour_image)
+            c: int = cv2.waitKey(1)
+            if c == ord('q'):
+                self.terminate()
+                return
+
+            # TODO
+            if not self.__tracker.is_ready():
+                continue
+            pose: Optional[np.ndarray] = self.__tracker.estimate_pose(colour_image, depth_image)
+            if pose is None:
+                continue
+
+            # TODO
+            self.__depth_estimator.put(colour_image, pose)
+
+    def terminate(self) -> None:
+        """TODO"""
+        self.__should_terminate = True
+        self.__mapping_thread.join()
+
+    # PRIVATE METHODS
+
+    def __run_mapping(self) -> None:
+        """TODO"""
+        while not self.__should_terminate:
+            pass
