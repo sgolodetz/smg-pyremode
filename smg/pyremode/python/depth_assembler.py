@@ -117,10 +117,8 @@ class DepthAssembler:
                 # TODO
                 while not self.__input_is_ready:
                     self.__input_ready.wait(0.1)
-
-                # TODO
-                if self.__should_terminate:
-                    return
+                    if self.__should_terminate:
+                        return
 
                 # TODO
                 assembly_image: np.ndarray = self.__input_image

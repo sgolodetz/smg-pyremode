@@ -45,8 +45,10 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         :return:    TODO
         """
         with self.__lock:
-            while not self.__keyframe_is_ready and not self.__should_terminate:
+            while not self.__keyframe_is_ready:
                 self.__keyframe_ready.wait(0.1)
+                if self.__should_terminate:
+                    return None
 
             self.__keyframe_is_ready = False
             return self.__front_assembler.get(blocking=True)
@@ -61,14 +63,21 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         if self.__cyclic_frame_idx == 0:
             acquired: bool = self.__lock.acquire(blocking=False)
             if acquired:
-                self.__front_assembler = self.__back_assembler
-                self.__back_assembler = DepthAssembler(
-                    self.__image_size, self.__intrinsics, min_depth=self.__min_depth, max_depth=self.__max_depth
-                )
-                if self.__front_assembler is not None:
-                    self.__keyframe_is_ready = True
-                    self.__keyframe_ready.notify()
-                self.__lock.release()
+                try:
+                    if self.__should_terminate:
+                        return
+
+                    if self.__front_assembler is not None:
+                        self.__front_assembler.terminate()
+                    self.__front_assembler = self.__back_assembler
+                    self.__back_assembler = DepthAssembler(
+                        self.__image_size, self.__intrinsics, min_depth=self.__min_depth, max_depth=self.__max_depth
+                    )
+                    if self.__front_assembler is not None:
+                        self.__keyframe_is_ready = True
+                        self.__keyframe_ready.notify()
+                finally:
+                    self.__lock.release()
             else:
                 return
 
@@ -79,3 +88,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         """TODO"""
         with self.__lock:
             self.__should_terminate = True
+            if self.__front_assembler:
+                self.__front_assembler.terminate()
+            if self.__back_assembler:
+                self.__back_assembler.terminate()

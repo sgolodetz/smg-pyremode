@@ -7,7 +7,7 @@ from typing import Optional
 
 from smg.openni.openni_camera import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import DepthEstimator
+from smg.pyremode import CONVERGED, DepthEstimator
 
 
 class KinectMappingSystem:
@@ -56,6 +56,7 @@ class KinectMappingSystem:
     def terminate(self) -> None:
         """TODO"""
         self.__should_terminate = True
+        self.__depth_estimator.terminate()
         self.__mapping_thread.join()
 
     # PRIVATE METHODS
@@ -68,6 +69,9 @@ class KinectMappingSystem:
             result = self.__depth_estimator.get()
             if result is not None:
                 reference_image, reference_pose, estimated_depth_image, convergence_map = result
+
+                depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
+                estimated_depth_image = np.where(depth_mask != 0, estimated_depth_image, 0).astype(np.float32)
 
                 # TEMPORARY
                 ax[0].clear()

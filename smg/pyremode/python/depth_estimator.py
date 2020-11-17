@@ -27,3 +27,8 @@ class DepthEstimator(ABC):
         :param input_pose:      TODO
         """
         pass
+
+    @abstractmethod
+    def terminate(self) -> None:
+        """TODO"""
+        pass
