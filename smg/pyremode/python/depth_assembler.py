@@ -12,7 +12,7 @@ from smg.geometry import GeometryUtil
 
 
 class DepthAssembler:
-    """Used to assemble a depth image over time from multiple colour images with known poses."""
+    """Used to assemble an RGB-D keyframe over time from multiple RGB images with known poses."""
 
     # CONSTRUCTOR
 
@@ -26,19 +26,20 @@ class DepthAssembler:
         :param min_depth:   An estimate of the lower bound of the depths present in the scene.
         :param max_depth:   An estimate of the upper bound of the depths present in the scene.
         """
+        self.__converged_percentage: float = 0.0
         self.__convergence_map: Optional[np.ndarray] = None
-        self.__estimated_depth_image: Optional[np.ndarray] = None
         self.__image_size: Tuple[int, int] = image_size
         self.__input_image: Optional[np.ndarray] = None
         self.__input_is_ready: bool = False
         self.__input_is_keyframe: bool = True
         self.__input_pose: Optional[np.ndarray] = None
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
+        self.__keyframe_colour_image: Optional[np.ndarray] = None
+        self.__keyframe_depth_image: Optional[np.ndarray] = None
+        self.__keyframe_pose: Optional[np.ndarray] = None
         self.__output_is_ready: bool = False
         self.__max_depth: float = max_depth
         self.__min_depth: float = min_depth
-        self.__reference_image: Optional[np.ndarray] = None
-        self.__reference_pose: Optional[np.ndarray] = None
         self.__should_terminate = False
 
         # Set up the locks and conditions.
@@ -54,17 +55,26 @@ class DepthAssembler:
 
     # PUBLIC METHODS
 
-    def get(self, *, blocking: bool) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    def get(self, *, blocking: bool) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
         """
-        TODO
+        Try to get the images, pose and convergence % / map for the assembled keyframe.
 
-        :param blocking:    TODO
-        :return:            TODO
+        .. note::
+            For clarity, there are three different scenarios in which this function can return None:
+              (i) The lock cannot be acquired, and we're unwilling to wait for it.
+             (ii) The lock can be acquired, but the output is not yet ready, and we're unwilling to wait for it.
+            (iii) The lock can be acquired, but the output is not yet ready, and the depth assembler is told to
+                  terminate whilst we're waiting for it.
+
+        :param blocking:    Whether or not to block until the images, pose and convergence map are available.
+        :return:            A tuple consisting of the colour image, depth image, pose, converged percentage
+                            and convergence map for the keyframe, if successful, or None otherwise.
         """
+        # Try to acquire the lock.
         acquired: bool = self.__get_lock.acquire(blocking=blocking)
         if acquired:
             try:
-                # TODO
+                # If the output is not yet ready, wait for it if we're willing to do so. Otherwise, early out.
                 if blocking:
                     while not self.__output_is_ready:
                         self.__output_ready.wait(0.1)
@@ -74,20 +84,21 @@ class DepthAssembler:
                     if not self.__output_is_ready:
                         return None
 
-                # TODO
+                # Mark the output as no longer ready so that we only get it once, and return it.
                 self.__output_is_ready = False
 
-                # TODO
-                return self.__reference_image, self.__reference_pose, \
-                    self.__estimated_depth_image.copy(), self.__convergence_map.copy()
+                return self.__keyframe_colour_image, self.__keyframe_depth_image.copy(), \
+                    self.__keyframe_pose, self.__converged_percentage, self.__convergence_map.copy()
             finally:
+                # Regardless of what happens, make sure we release the lock again at the end of the function.
                 self.__get_lock.release()
         else:
+            # If the lock can't be acquired right now, and we don't want to wait for it, early out.
             return None
 
     def put(self, input_image: np.ndarray, input_pose: np.ndarray, *, blocking: bool) -> None:
         """
-        Try to add an image with a known pose to the depth assembler.
+        Try to add a colour image with a known pose to the depth assembler.
 
         .. note::
             It normally makes sense to set blocking to False, since the rate at which images
@@ -96,10 +107,10 @@ class DepthAssembler:
             fed images at the rate at which it can process them, rather than having to keep
             a queue of images to process in the future. However, there may be times when we
             want to ensure that every single image passed to the assembler is processed, in
-            which blocking can be set to True to arrange this.
+            which case blocking can be set to True to arrange this.
 
-        :param input_image:     The image.
-        :param input_pose:      The camera pose when the image was captured.
+        :param input_image:     The input colour image.
+        :param input_pose:      The input camera pose (denoting a transformation from camera space to world space).
         :param blocking:        Whether or not to block until the image is successfully added.
         """
         # FIXME: If blocking is True, this can block forever, even if the assembler has been told to terminate.
@@ -152,8 +163,8 @@ class DepthAssembler:
             # If this input image and pose are the keyframe:
             if self.__input_is_keyframe:
                 # Store them for later.
-                self.__reference_image = input_image
-                self.__reference_pose = input_pose
+                self.__keyframe_colour_image = input_image
+                self.__keyframe_pose = input_pose
 
                 # Ensure that no future input is treated as the keyframe.
                 self.__input_is_keyframe = False
@@ -167,11 +178,12 @@ class DepthAssembler:
                 # Otherwise, use the inputs to update the existing REMODE depthmap.
                 depthmap.update(cv_grey_image, se3)
 
-            # Update the output convergence map and estimated depth image, and signal that they're ready.
+            # Update the output convergence % and map, and keyframe depth image, and signal that they're ready.
             with self.__get_lock:
+                self.__converged_percentage = depthmap.get_converged_percentage()
                 self.__convergence_map = np.array(depthmap.get_convergence_map(), copy=False)
-                self.__estimated_depth_image = np.array(depthmap.get_denoised_depthmap(), copy=False)
-                GeometryUtil.make_depths_orthogonal(self.__estimated_depth_image, self.__intrinsics)
+                self.__keyframe_depth_image = np.array(depthmap.get_denoised_depthmap(), copy=False)
+                GeometryUtil.make_depths_orthogonal(self.__keyframe_depth_image, self.__intrinsics)
 
                 self.__output_is_ready = True
                 self.__output_ready.notify()

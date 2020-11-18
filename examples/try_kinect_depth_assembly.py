@@ -65,7 +65,8 @@ def main():
 
                 result = depth_assembler.get(blocking=False)
                 if result is not None:
-                    _, _, estimated_depth_image, convergence_map = result
+                    _, estimated_depth_image, _, converged_percentage, convergence_map = result
+                    print(f"Converged %: {converged_percentage}")
 
                 ax[0, 0].clear()
                 ax[0, 1].clear()

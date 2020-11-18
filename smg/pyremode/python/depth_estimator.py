@@ -10,7 +10,7 @@ class DepthEstimator(ABC):
     # PUBLIC ABSTRACT METHODS
 
     @abstractmethod
-    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
         """
         TODO
 

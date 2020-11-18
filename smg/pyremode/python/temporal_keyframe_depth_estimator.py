@@ -48,7 +48,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
     # PUBLIC METHODS
 
-    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
         """
         TODO
 
