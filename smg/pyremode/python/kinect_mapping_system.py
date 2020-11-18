@@ -78,7 +78,7 @@ class KinectMappingSystem:
             # TODO
             result = self.__depth_estimator.get()
             if result is not None:
-                reference_image, reference_pose, estimated_depth_image, convergence_map = result
+                reference_image, reference_pose, estimated_depth_image, converged_percentage, convergence_map = result
 
                 depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
                 estimated_depth_image = np.where(depth_mask != 0, estimated_depth_image, 0).astype(np.float32)
