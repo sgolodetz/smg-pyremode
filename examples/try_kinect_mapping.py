@@ -1,6 +1,6 @@
 import os
 
-from smg.openni.openni_camera import OpenNICamera
+from smg.openni import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import DepthEstimator, RGBDMappingSystem, RGBDOpenNICamera, TemporalKeyframeDepthEstimator
 

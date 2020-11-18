@@ -16,7 +16,9 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         "numpy",
+        "smg-geometry",
         "smg-opencv",
+        "smg-openni",
         "smg-pyorbslam2"
     ],
     classifiers=[

@@ -5,7 +5,6 @@ import threading
 
 from typing import Optional
 
-from smg.openni.openni_camera import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import CONVERGED, DepthEstimator, RGBDImageSource
 
@@ -24,7 +23,7 @@ class RGBDMappingSystem:
         :param depth_estimator: The depth estimator to use.
         """
         self.__depth_estimator: DepthEstimator = depth_estimator
-        self.__image_source: OpenNICamera = image_source
+        self.__image_source: RGBDImageSource = image_source
         self.__should_terminate: bool = False
         self.__tracker: RGBDTracker = tracker
 
