@@ -1,12 +1,3 @@
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
-import open3d as o3d
-import threading
-
-from typing import Optional, Tuple
-
-from smg.geometry import GeometryUtil
 from smg.openni.openni_camera import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import KinectMappingSystem, TemporalKeyframeDepthEstimator, DepthEstimator

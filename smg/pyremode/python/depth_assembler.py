@@ -37,7 +37,7 @@ class DepthAssembler:
         self.__keyframe_convergence_map: Optional[np.ndarray] = None
         self.__keyframe_depth_image: Optional[np.ndarray] = None
         self.__keyframe_pose: Optional[np.ndarray] = None
-        self.__output_is_ready: bool = False
+        self.__output_is_available: bool = False
         self.__max_depth: float = max_depth
         self.__min_depth: float = min_depth
         self.__should_terminate = False
@@ -47,7 +47,7 @@ class DepthAssembler:
         self.__put_lock = threading.Lock()
 
         self.__input_ready = threading.Condition(self.__put_lock)
-        self.__output_ready = threading.Condition(self.__get_lock)
+        self.__output_available = threading.Condition(self.__get_lock)
 
         # Start the assembly thread.
         self.__assembly_thread = threading.Thread(target=self.__assemble_depth_image)
@@ -62,8 +62,8 @@ class DepthAssembler:
         .. note::
             For clarity, there are three different scenarios in which this function can return None:
               (i) The lock cannot be acquired, and we're unwilling to wait for it.
-             (ii) The lock can be acquired, but the output is not yet ready, and we're unwilling to wait for it.
-            (iii) The lock can be acquired, but the output is not yet ready, and the depth assembler is told to
+             (ii) The lock can be acquired, but the output is not yet available, and we're unwilling to wait for it.
+            (iii) The lock can be acquired, but the output is not yet available, and the depth assembler is told to
                   terminate whilst we're waiting for it.
 
         :param blocking:    Whether or not to block until the images, pose and convergence % / map are available.
@@ -74,18 +74,15 @@ class DepthAssembler:
         acquired: bool = self.__get_lock.acquire(blocking=blocking)
         if acquired:
             try:
-                # If the output is not yet ready, wait for it if we're willing to do so. Otherwise, early out.
+                # If the output is not yet available, wait for it if we're willing to do so. Otherwise, early out.
                 if blocking:
-                    while not self.__output_is_ready:
-                        self.__output_ready.wait(0.1)
+                    while not self.__output_is_available:
+                        self.__output_available.wait(0.1)
                         if self.__should_terminate:
                             return None
                 else:
-                    if not self.__output_is_ready:
+                    if not self.__output_is_available:
                         return None
-
-                # Mark the output as no longer ready so that we only get it once, and return it.
-                self.__output_is_ready = False
 
                 return self.__keyframe_colour_image, self.__keyframe_depth_image.copy(), self.__keyframe_pose, \
                     self.__keyframe_converged_percentage, self.__keyframe_convergence_map.copy()
@@ -190,7 +187,7 @@ class DepthAssembler:
                 # Otherwise, use the inputs to update the existing REMODE depthmap.
                 depthmap.update(cv_grey_image, se3)
 
-            # Update the keyframe's convergence % / map and estimated depth image, and signal that they're ready.
+            # Update the keyframe's convergence % / map and estimated depth image, and signal that they're available.
             with self.__get_lock:
                 self.__keyframe_converged_percentage = depthmap.get_converged_percentage()
                 self.__keyframe_convergence_map = np.array(depthmap.get_convergence_map(), copy=False)
@@ -199,5 +196,5 @@ class DepthAssembler:
                 # Note: The depths produced by REMODE are Euclidean, so we need to manually convert them to orthogonal.
                 GeometryUtil.make_depths_orthogonal(self.__keyframe_depth_image, self.__intrinsics)
 
-                self.__output_is_ready = True
-                self.__output_ready.notify()
+                self.__output_is_available = True
+                self.__output_available.notify()
