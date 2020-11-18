@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 
 class DepthEstimator(ABC):
-    """TODO"""
+    """A depth estimator that assembles and yields RGB-D keyframes."""
 
     # PUBLIC ABSTRACT METHODS
 
@@ -19,16 +19,16 @@ class DepthEstimator(ABC):
         pass
 
     @abstractmethod
-    def put(self, input_image: np.ndarray, input_pose: np.ndarray) -> None:
+    def put(self, input_colour_image: np.ndarray, input_pose: np.ndarray) -> None:
         """
-        TODO
+        Try to add a colour image with a known pose to the depth estimator.
 
-        :param input_image:     TODO
-        :param input_pose:      TODO
+        :param input_colour_image:  The input colour image.
+        :param input_pose:          The input camera pose (denoting a transformation from camera space to world space).
         """
         pass
 
     @abstractmethod
     def terminate(self) -> None:
-        """TODO"""
+        """Tell the depth estimator to terminate."""
         pass
