@@ -16,7 +16,8 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         "numpy",
-        "smg-opencv"
+        "smg-opencv",
+        "smg-pyorbslam2"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
