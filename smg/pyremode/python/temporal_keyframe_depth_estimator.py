@@ -51,33 +51,9 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
     # PUBLIC METHODS
 
-    def get(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
+    def add_posed_image(self, input_colour_image: np.ndarray, input_pose: np.ndarray) -> None:
         """
-        Try to get the images, pose and convergence % / map for an assembled keyframe.
-
-        .. note::
-            This is intended to be blocking, and should only return None when the estimator has been told to terminate.
-
-        :return:    The images, pose and ocnvergence % / map for an assembled keyframe, if possible, or None otherwise.
-        """
-        with self.__lock:
-            # Wait for a keyframe to be ready.
-            while not self.__keyframe_is_ready:
-                self.__keyframe_ready.wait(0.1)
-                if self.__should_terminate:
-                    return None
-
-            # Reset the flag so that we only get the keyframe once.
-            self.__keyframe_is_ready = False
-
-            # Return the keyframe. Note that we block here because whilst the depth assembler may have seen
-            # enough images to make the keyframe at this point, it's possible that it still needs to finish
-            # assembling the depth image for the keyframe internally, so we have to wait for it.
-            return self.__front_assembler.get(blocking=True)
-
-    def put(self, input_colour_image: np.ndarray, input_pose: np.ndarray) -> None:
-        """
-        Try to pass a colour image with a known pose to the depth estimator.
+        Try to add a colour image with a known pose to the depth estimator.
 
         .. note::
             This is intended to be non-blocking, for performance reasons, and so any particular image passed in
@@ -145,6 +121,30 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         # that is used to keep track of when to move on to the next keyframe.
         self.__back_assembler.put(input_colour_image, input_pose, blocking=False)
         self.__keyframe_image_count += 1
+
+    def get_keyframe(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
+        """
+        Try to get the images, pose and convergence % / map for an assembled keyframe.
+
+        .. note::
+            This is intended to be blocking, and should only return None when the estimator has been told to terminate.
+
+        :return:    The images, pose and ocnvergence % / map for an assembled keyframe, if possible, or None otherwise.
+        """
+        with self.__lock:
+            # Wait for a keyframe to be ready.
+            while not self.__keyframe_is_ready:
+                self.__keyframe_ready.wait(0.1)
+                if self.__should_terminate:
+                    return None
+
+            # Reset the flag so that we only get the keyframe once.
+            self.__keyframe_is_ready = False
+
+            # Return the keyframe. Note that we block here because whilst the depth assembler may have seen
+            # enough images to make the keyframe at this point, it's possible that it still needs to finish
+            # assembling the depth image for the keyframe internally, so we have to wait for it.
+            return self.__front_assembler.get(blocking=True)
 
     def terminate(self) -> None:
         """Tell the depth estimator to terminate."""
