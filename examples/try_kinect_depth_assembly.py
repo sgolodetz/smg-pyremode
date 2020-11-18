@@ -39,6 +39,7 @@ def main():
             intrinsics: Tuple[float, float, float, float] = camera.get_colour_intrinsics()
             depth_assembler: DepthAssembler = DepthAssembler(camera.get_colour_dims(), intrinsics)
             is_keyframe: bool = True
+
             reference_colour_image: Optional[np.ndarray] = None
             reference_depth_image: Optional[np.ndarray] = None
             estimated_depth_image: Optional[np.ndarray] = None
@@ -47,27 +48,34 @@ def main():
             _, ax = plt.subplots(2, 2)
 
             while True:
+                # TODO
                 colour_image, depth_image = camera.get_images()
                 cv2.imshow("Image", colour_image)
                 cv2.waitKey(1)
 
+                # TODO
                 if not tracker.is_ready():
                     continue
                 pose: Optional[np.ndarray] = tracker.estimate_pose(colour_image, depth_image)
                 if pose is None:
                     continue
 
+                # TODO
                 depth_assembler.put(colour_image, pose, blocking=False)
+
+                # TODO
                 if is_keyframe:
                     reference_colour_image = colour_image
                     reference_depth_image = depth_image
                     is_keyframe = False
 
+                # TODO
                 result = depth_assembler.get(blocking=False)
                 if result is not None:
                     _, estimated_depth_image, _, converged_percentage, convergence_map = result
                     print(f"Converged %: {converged_percentage}")
 
+                # TODO
                 ax[0, 0].clear()
                 ax[0, 1].clear()
                 ax[1, 0].clear()
@@ -82,8 +90,10 @@ def main():
                 if plt.waitforbuttonpress(0.001):
                     break
 
+            # TODO
             cv2.destroyAllWindows()
 
+            # TODO
             depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
             pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
                 reference_colour_image, estimated_depth_image, depth_mask, intrinsics
