@@ -7,9 +7,8 @@ from typing import Optional
 
 from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import MonocularTracker
+from smg.pyremode import *
 from smg.rotory.drone_factory import DroneFactory
-
-from pyremode import *
 
 
 def print_se3(se3: SE3f) -> None:

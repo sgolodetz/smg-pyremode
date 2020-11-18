@@ -2,13 +2,10 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scipy.spatial.transform import Rotation
 from typing import Optional
 
-from smg.openni.openni_camera import OpenNICamera
-from smg.pyorbslam2 import RGBDTracker
-
-from pyremode import *
+from smg.pyopencv import CVMat1b
+from smg.pyremode import *
 
 
 def print_se3(se3: SE3f) -> None:

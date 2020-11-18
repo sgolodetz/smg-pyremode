@@ -3,14 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 
-from scipy.spatial.transform import Rotation
 from typing import Optional, Tuple
 
 from smg.geometry import GeometryUtil
 from smg.openni.openni_camera import OpenNICamera
-from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, Depthmap, SE3f
+from smg.pyremode import CONVERGED, DepthAssembler
 
 
 def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
@@ -32,13 +30,6 @@ def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
     vis.add_geometry(axes)
 
 
-def print_se3(se3: SE3f) -> None:
-    print()
-    for row in range(3):
-        print([se3.data(row, col) for col in range(4)])
-    print()
-
-
 def main():
     with OpenNICamera(mirror_images=True) as camera:
         with RGBDTracker(
@@ -46,10 +37,12 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             intrinsics: Tuple[float, float, float, float] = camera.get_colour_intrinsics()
-            fx, fy, cx, cy = intrinsics
-            depthmap: Depthmap = Depthmap(*camera.get_colour_dims(), fx, cx, fy, cy)
+            depth_assembler: DepthAssembler = DepthAssembler(camera.get_colour_dims(), intrinsics)
+            is_keyframe: bool = True
             reference_colour_image: Optional[np.ndarray] = None
             reference_depth_image: Optional[np.ndarray] = None
+            estimated_depth_image: Optional[np.ndarray] = None
+            convergence_map: Optional[np.ndarray] = None
 
             _, ax = plt.subplots(2, 2)
 
@@ -64,34 +57,23 @@ def main():
                 if pose is None:
                     continue
 
-                r: Rotation = Rotation.from_matrix(pose[0:3, 0:3])
-                t: np.ndarray = pose[0:3, 3]
-                qx, qy, qz, qw = r.as_quat()
-                se3: SE3f = SE3f(qw, qx, qy, qz, *t)
-
-                print_se3(se3)
-
-                grey_image: np.ndarray = cv2.cvtColor(colour_image, cv2.COLOR_BGR2GRAY)
-                cv_grey_image: CVMat1b = CVMat1b.zeros(*grey_image.shape[:2])
-                np.copyto(np.array(cv_grey_image, copy=False), grey_image)
-
-                if reference_colour_image is None:
+                depth_assembler.put(colour_image, pose, blocking=False)
+                if is_keyframe:
                     reference_colour_image = colour_image
                     reference_depth_image = depth_image
-                    depthmap.set_reference_image(cv_grey_image, se3, 0.1, 4.0)
-                else:
-                    depthmap.update(cv_grey_image, se3)
-                    print(depthmap.get_converged_percentage())
+                    is_keyframe = False
 
-                estimated_depth_image: np.ndarray = np.array(depthmap.get_denoised_depthmap(), dtype=np.float32)
-                GeometryUtil.make_depths_orthogonal(estimated_depth_image, intrinsics)
+                result = depth_assembler.get(blocking=False)
+                if result is not None:
+                    _, _, estimated_depth_image, convergence_map = result
 
                 ax[0, 0].clear()
                 ax[0, 1].clear()
                 ax[1, 0].clear()
                 ax[1, 1].clear()
                 ax[0, 0].imshow(reference_colour_image[:, :, [2, 1, 0]])
-                ax[0, 1].imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
+                if estimated_depth_image is not None:
+                    ax[0, 1].imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
                 ax[1, 0].imshow(colour_image[:, :, [2, 1, 0]])
                 ax[1, 1].imshow(reference_depth_image, vmin=0.0, vmax=4.0)
 
@@ -101,11 +83,7 @@ def main():
 
             cv2.destroyAllWindows()
 
-            depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
-
-            # convergence_map: np.ndarray = np.array(depthmap.get_convergence_map(), copy=False)
-            # depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
-
+            depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
             pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
                 reference_colour_image, estimated_depth_image, depth_mask, intrinsics
             )
@@ -116,8 +94,8 @@ def main():
             pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
 
             # Denoise the point cloud (slow).
-            # pcd = pcd.uniform_down_sample(every_k_points=5)
-            # pcd, _ = pcd.remove_radius_outlier(64, 0.05)
+            pcd = pcd.uniform_down_sample(every_k_points=5)
+            pcd, _ = pcd.remove_statistical_outlier(20, 2.0)
 
             # Set up the visualisation.
             vis = o3d.visualization.Visualizer()
