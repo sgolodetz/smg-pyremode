@@ -12,8 +12,8 @@ class RGBDImageSource(ABC):
     @abstractmethod
     def get_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        TODO
+        Get colour and depth images from the image source.
 
-        :return:    TODO
+        :return:    A tuple consisting of a colour image and a depth image from the image source (in that order).
         """
         pass

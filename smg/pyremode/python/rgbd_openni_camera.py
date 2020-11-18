@@ -7,15 +7,15 @@ from smg.pyremode.python.rgbd_image_source import RGBDImageSource
 
 
 class RGBDOpenNICamera(RGBDImageSource):
-    """TODO"""
+    """An RGB-D image source that wraps an OpenNI camera."""
 
     # CONSTRUCTOR
 
     def __init__(self, camera: OpenNICamera):
         """
-        TODO
+        Construct an RGB-D image source that wraps an OpenNI camera.
 
-        :param camera:  TODO
+        :param camera:  The OpenNI camera.
         """
         self.__camera: OpenNICamera = camera
 
@@ -23,8 +23,8 @@ class RGBDOpenNICamera(RGBDImageSource):
 
     def get_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        TODO
+        Get colour and depth images from the image source.
 
-        :return:    TODO
+        :return:    A tuple consisting of a colour image and a depth image from the image source (in that order).
         """
         return self.__camera.get_images()
