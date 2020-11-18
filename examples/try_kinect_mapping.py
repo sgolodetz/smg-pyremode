@@ -1,6 +1,6 @@
 from smg.openni.openni_camera import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import KinectMappingSystem, TemporalKeyframeDepthEstimator, DepthEstimator
+from smg.pyremode import DepthEstimator, RGBDMappingSystem, RGBDOpenNICamera, TemporalKeyframeDepthEstimator
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
                 camera.get_colour_dims(), camera.get_colour_intrinsics()
             )
-            with KinectMappingSystem(camera, depth_estimator, tracker) as system:
+            with RGBDMappingSystem(RGBDOpenNICamera(camera), depth_estimator, tracker) as system:
                 system.run()
 
 

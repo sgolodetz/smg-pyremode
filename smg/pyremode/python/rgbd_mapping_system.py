@@ -7,22 +7,24 @@ from typing import Optional
 
 from smg.openni.openni_camera import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, DepthEstimator
+from smg.pyremode import CONVERGED, DepthEstimator, RGBDImageSource
 
 
-class KinectMappingSystem:
+class RGBDMappingSystem:
     """TODO"""
 
     # CONSTRUCTOR
 
-    def __init__(self, camera: OpenNICamera, depth_estimator: DepthEstimator, tracker: RGBDTracker):
+    def __init__(self, image_source: RGBDImageSource, depth_estimator: DepthEstimator, tracker: RGBDTracker):
         """
         TODO
 
-        :param depth_estimator:     TODO
+        :param image_source:    TODO
+        :param depth_estimator: TODO
+        :param tracker:         TODO
         """
-        self.__camera: OpenNICamera = camera
         self.__depth_estimator: DepthEstimator = depth_estimator
+        self.__image_source: OpenNICamera = image_source
         self.__should_terminate: bool = False
         self.__tracker: RGBDTracker = tracker
 
@@ -46,7 +48,7 @@ class KinectMappingSystem:
 
         while not self.__should_terminate:
             # TODO
-            colour_image, depth_image = self.__camera.get_images()
+            colour_image, depth_image = self.__image_source.get_images()
             cv2.imshow("Tracking Image", colour_image)
             c: int = cv2.waitKey(1)
             if c == ord('q'):
