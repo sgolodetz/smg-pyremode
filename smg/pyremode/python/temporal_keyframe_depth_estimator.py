@@ -61,14 +61,18 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         :return:    The images, pose and ocnvergence % / map for an assembled keyframe, if possible, or None otherwise.
         """
         with self.__lock:
+            # Wait for a keyframe to be ready.
             while not self.__keyframe_is_ready:
                 self.__keyframe_ready.wait(0.1)
                 if self.__should_terminate:
                     return None
 
-            # Mark the keyframe as no longer ready so that we only get it once, and return it.
+            # Reset the flag so that we only get the keyframe once.
             self.__keyframe_is_ready = False
 
+            # Return the keyframe. Note that we block here because whilst the depth assembler may have seen
+            # enough images to make the keyframe at this point, it's possible that it still needs to finish
+            # assembling the depth image for the keyframe internally, so we have to wait for it.
             return self.__front_assembler.get(blocking=True)
 
     def put(self, input_colour_image: np.ndarray, input_pose: np.ndarray) -> None:
