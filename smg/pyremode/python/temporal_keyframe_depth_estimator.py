@@ -8,22 +8,27 @@ from smg.pyremode import DepthAssembler, DepthEstimator
 
 class TemporalKeyframeDepthEstimator(DepthEstimator):
     """
-    A depth estimator that assembles RGB-D keyframes by passing a number of input RGB images in time order
-    to each depth assembler before moving on to the next one.
+    A depth estimator that assembles RGB-D keyframes by passing input RGB images to each depth assembler in time order.
     """
 
     # CONSTRUCTOR
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
-                 min_images_per_keyframe: int = 100, max_images_per_keyframe: int = 200,
-                 min_depth: float = 0.1, max_depth: float = 4.0):
+                 min_converged_percentage: float = 40.0, min_depth: float = 0.1, max_depth: float = 4.0,
+                 min_images_per_keyframe: int = 100, max_images_per_keyframe: int = 200):
         """
         Construct a temporal keyframe depth estimator.
 
+        .. note::
+            When at least the minimum but fewer than the maximum number of images have been supplied, the decision
+            about whether to yield a keyframe early is based on how well the REMODE depthmap has converged.
+
         :param image_size:                  The image size, as a (width, height) tuple.
         :param intrinsics:                  The camera intrinsics.
-        :param min_images_per_keyframe:     TODO
-        :param max_images_per_keyframe:     TODO
+        :param min_converged_percentage:    The minimum percentage of the REMODE depthmap that needs to have
+                                            converged for a keyframe to be yielded early.
+        :param min_images_per_keyframe:     The minimum number of images to require before yielding a keyframe.
+        :param max_images_per_keyframe:     The maximum number of images to require before yielding a keyframe.
         :param min_depth:                   An estimate of the lower bound of the depths present in the scene.
         :param max_depth:                   An estimate of the upper bound of the depths present in the scene.
         """
@@ -34,8 +39,9 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         self.__keyframe_image_count: int = 0
         self.__keyframe_is_ready: bool = False
         self.__max_depth: float = max_depth
-        self.__min_depth: float = min_depth
         self.__max_images_per_keyframe: int = max_images_per_keyframe
+        self.__min_converged_percentage: float = min_converged_percentage
+        self.__min_depth: float = min_depth
         self.__min_images_per_keyframe: int = min_images_per_keyframe
         self.__should_terminate: bool = False
 
@@ -91,7 +97,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
             result = self.__back_assembler.get(blocking=True)
             if result is not None:
                 _, _, _, converged_percentage, _ = result
-                if converged_percentage >= 40.0:
+                if converged_percentage >= self.__min_converged_percentage:
                     time_for_next_keyframe = True
 
         # If it's time for the next keyframe:
