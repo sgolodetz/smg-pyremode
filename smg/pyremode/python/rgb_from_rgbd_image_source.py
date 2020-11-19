@@ -5,7 +5,7 @@ from typing import Tuple
 from smg.pyremode import RGBImageSource, RGBDImageSource
 
 
-class RGBOpenNICamera(RGBImageSource):
+class RGBFromRGBDImageSource(RGBImageSource):
     """An RGB image source that wraps an RGB-D image source."""
 
     # CONSTRUCTOR

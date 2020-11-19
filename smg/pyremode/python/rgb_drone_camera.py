@@ -6,7 +6,7 @@ from smg.pyremode import RGBImageSource
 from smg.rotory.drones.drone import Drone
 
 
-class RGBOpenNICamera(RGBImageSource):
+class RGBDroneCamera(RGBImageSource):
     """An RGB image source that wraps a drone."""
 
     # CONSTRUCTOR
