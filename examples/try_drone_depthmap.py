@@ -19,19 +19,35 @@ def print_se3(se3: SE3f) -> None:
 
 
 def main():
-    with DroneFactory.make_drone("tello") as drone:
+    with DroneFactory.make_drone("tello", local_ip="192.168.10.3") as drone:
         with MonocularTracker(
             settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            fx, fy, cx, cy = 921.0, 921.0, 480.0, 360.0
+            # fx, fy, cx, cy = 946.60441222, 941.38386885, 460.29254907, 357.08431882
+            fx, fy, cx, cy = 938.55289501, 932.86950291, 480.0, 360.0
             depthmap: Depthmap = Depthmap(960, 720, fx, cx, fy, cy)
             reference_colour_image: Optional[np.ndarray] = None
 
             _, ax = plt.subplots(2, 2)
 
             while True:
-                colour_image = drone.get_image()
+                distorted_image = drone.get_image()
+
+                # camera_matrix: np.ndarray = np.array([
+                #     [946.60441222, 0., 460.29254907],
+                #     [0., 941.38386885, 357.08431882],
+                #     [0., 0., 1.]
+                # ])
+                # dist_coeffs: np.ndarray = np.array([[0.04968041, -0.59998154, -0.00377696, -0.00863985, 2.14472665]])
+                camera_matrix: np.ndarray = np.array([
+                    [938.55289501, 0., 480.],
+                    [0., 932.86950291, 360.],
+                    [0., 0., 1.]
+                ])
+                dist_coeffs: np.ndarray = np.array([[0.03306774, -0.40497806, -0.00216106, -0.00294729, 1.31711308]])
+                colour_image = cv2.undistort(distorted_image, camera_matrix, dist_coeffs)
+
                 cv2.imshow("Image", colour_image)
                 cv2.waitKey(1)
 
@@ -46,7 +62,7 @@ def main():
                 qx, qy, qz, qw = r.as_quat()
                 se3: SE3f = SE3f(qw, qx, qy, qz, *t)
 
-                print_se3(se3)
+                # print_se3(se3)
 
                 grey_image: np.ndarray = cv2.cvtColor(colour_image, cv2.COLOR_BGR2GRAY)
                 cv_grey_image: CVMat1b = CVMat1b.zeros(*grey_image.shape[:2])
@@ -59,6 +75,8 @@ def main():
                     depthmap.update(cv_grey_image, se3)
 
                 estimated_depth_image: np.ndarray = np.array(depthmap.get_denoised_depthmap())
+
+                print(depthmap.get_converged_percentage())
 
                 ax[0, 0].clear()
                 ax[0, 1].clear()

@@ -7,6 +7,7 @@ from .python.temporal_keyframe_depth_estimator import TemporalKeyframeDepthEstim
 from .python.rgb_image_source import RGBImageSource
 from .python.rgbd_image_source import RGBDImageSource
 
+from .python.rgb_drone_camera import RGBDroneCamera
 from .python.rgb_from_rgbd_image_source import RGBFromRGBDImageSource
 from .python.rgbd_openni_camera import RGBDOpenNICamera
 
