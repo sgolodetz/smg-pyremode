@@ -19,11 +19,11 @@ class RGBDroneCamera(RGBImageSource):
         :param drone:   The drone to wrap.
         """
         self.__camera_matrix: np.ndarray = np.array([
-            [946.60441222, 0., 460.29254907],
-            [0., 941.38386885, 357.08431882],
+            [938.55289501, 0., 480.],
+            [0., 932.86950291, 360.],
             [0., 0., 1.]
         ])
-        self.__dist_coeffs: np.ndarray = np.array([[0.04968041, -0.59998154, -0.00377696, -0.00863985, 2.14472665]])
+        self.__dist_coeffs: np.ndarray = np.array([[0.03306774, -0.40497806, -0.00216106, -0.00294729, 1.31711308]])
         self.__drone: Drone = drone
 
     # PUBLIC METHODS

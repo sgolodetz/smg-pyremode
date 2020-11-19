@@ -17,13 +17,13 @@ def main():
     tsdf: Optional[o3d.pipelines.integration.ScalableTSDFVolume] = None
 
     # with OpenNICamera(mirror_images=True) as camera:
-    with Tello(local_ip="192.168.10.3", print_commands=False, print_responses=False, print_state_messages=False) as drone:
+    with Tello(local_ip="192.168.10.2", print_commands=False, print_responses=False, print_state_messages=False) as drone:
         with MonocularTracker(
-            settings_file=f"settings-kinect.yaml", use_viewer=True,
+            settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             image_dims = (960, 720)
-            intrinsics = 946.60441222, 941.38386885, 460.29254907, 357.08431882
+            intrinsics = 938.55289501, 932.86950291, 480.0, 360.0
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
                 image_dims, intrinsics
             )

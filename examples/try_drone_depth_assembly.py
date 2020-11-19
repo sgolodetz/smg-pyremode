@@ -14,9 +14,9 @@ from smg.utility import GeometryUtil
 
 
 def main():
-    with DroneFactory.make_drone("tello", local_ip="192.168.10.3") as drone:
+    with DroneFactory.make_drone("tello", local_ip="192.168.10.2") as drone:
         with MonocularTracker(
-            settings_file=f"settings-kinect.yaml", use_viewer=True,
+            settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             colour_dims: Tuple[int, int] = (960, 720)
