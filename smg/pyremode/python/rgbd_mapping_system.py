@@ -13,7 +13,10 @@ from smg.utility import ImageUtil
 
 
 class RGBDMappingSystem:
-    """A REMODE-based multi-view mapping system that uses an RGB-D tracker to estimate metric camera poses."""
+    """
+    A REMODE-based multi-view mapping system that uses an RGB-D tracker to estimate metric camera poses,
+    and fuses keyframes into an Open3D TSDF.
+    """
 
     # CONSTRUCTOR
 
@@ -31,8 +34,8 @@ class RGBDMappingSystem:
         self.__tracker: RGBDTracker = tracker
 
         self.__tsdf: o3d.pipelines.integration.ScalableTSDFVolume = o3d.pipelines.integration.ScalableTSDFVolume(
-            voxel_length=0.005,
-            sdf_trunc=0.02,
+            voxel_length=0.01,
+            sdf_trunc=0.04,
             color_type=o3d.pipelines.integration.TSDFVolumeColorType.RGB8
         )
 
@@ -54,7 +57,7 @@ class RGBDMappingSystem:
         """
         Run the mapping system.
 
-        :return:    TODO
+        :return:    The final TSDF.
         """
         # Start the mapping thread.
         self.__mapping_thread.start()
@@ -84,7 +87,11 @@ class RGBDMappingSystem:
         """
         Tell the mapping system to terminate.
 
-        :return:    TODO
+        .. note::
+            We return the final TSDF from this function because we can guarantee that the mapping thread
+            will have terminated by then, and so there won't be any race conditions.
+
+        :return:    The final TSDF.
         """
         # If the mapping system hasn't already been told to terminate.
         if not self.__should_terminate:
