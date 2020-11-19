@@ -8,6 +8,7 @@ from typing import Optional
 
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import CONVERGED, DepthEstimator, RGBDImageSource
+from smg.utility import ImageUtil
 
 
 class RGBDMappingSystem:
@@ -119,7 +120,9 @@ class RGBDMappingSystem:
                 depth_image = np.where(depth_mask != 0, depth_image, 0).astype(np.float32)
 
                 # Integrate the keyframe into the map.
-                RGBDMappingSystem.__integrate_frame(colour_image, depth_image, pose, self.__tsdf, intrinsics)
+                RGBDMappingSystem.__integrate_frame(
+                    ImageUtil.flip_channels(colour_image), depth_image, pose, self.__tsdf, intrinsics
+                )
 
                 # TEMPORARY
                 # Show the keyframe images for debugging purposes.
@@ -135,7 +138,6 @@ class RGBDMappingSystem:
 
     # PRIVATE STATIC METHODS
 
-    # noinspection PyUnresolvedReferences
     @staticmethod
     def __integrate_frame(colour_image: np.ndarray, depth_image: np.ndarray, world_to_camera: np.ndarray,
                           tsdf: o3d.pipelines.integration.ScalableTSDFVolume,
