@@ -15,7 +15,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
                  min_converged_percentage: float = 40.0, min_depth: float = 0.1, max_depth: float = 4.0,
-                 min_images_per_keyframe: int = 30, max_images_per_keyframe: int = 200):
+                 min_images_per_keyframe: int = 30, max_images_per_keyframe: int = 150):
         """
         Construct a temporal keyframe depth estimator.
 
@@ -119,7 +119,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
         # Add the input colour image and pose to the back assembler, and update the image count
         # that is used to keep track of when to move on to the next keyframe.
-        self.__back_assembler.put(input_colour_image, input_pose, blocking=False)
+        self.__back_assembler.put(input_colour_image, input_pose, blocking=True)
         self.__keyframe_image_count += 1
 
     def get_keyframe(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
