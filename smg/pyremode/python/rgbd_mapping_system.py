@@ -6,6 +6,7 @@ import threading
 
 from typing import Optional
 
+from smg.open3d import ReconstructionUtil
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import CONVERGED, DepthEstimator, RGBDImageSource
 from smg.utility import ImageUtil
@@ -115,16 +116,19 @@ class RGBDMappingSystem:
             if keyframe is not None:
                 colour_image, depth_image, pose, converged_percentage, convergence_map = keyframe
 
-                # If this succeeds, post-process the depth image to keep only those pixels whose depth has converged.
+                # If the keyframe hasn't sufficiently converged, don't fuse it.
+                if converged_percentage < 30.0:
+                    continue
+
+                # Post-process the depth image to keep only those pixels whose depth has converged.
                 depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
                 depth_image = np.where(depth_mask != 0, depth_image, 0).astype(np.float32)
 
                 # Integrate the keyframe into the map.
-                RGBDMappingSystem.__integrate_frame(
-                    ImageUtil.flip_channels(colour_image), depth_image, pose, self.__tsdf, intrinsics
+                ReconstructionUtil.integrate_frame(
+                    ImageUtil.flip_channels(colour_image), depth_image, pose, intrinsics, self.__tsdf
                 )
 
-                # TEMPORARY
                 # Show the keyframe images for debugging purposes.
                 ax[0].clear()
                 ax[1].clear()
@@ -135,35 +139,3 @@ class RGBDMappingSystem:
 
                 plt.draw()
                 plt.waitforbuttonpress(0.001)
-
-    # PRIVATE STATIC METHODS
-
-    @staticmethod
-    def __integrate_frame(colour_image: np.ndarray, depth_image: np.ndarray, world_to_camera: np.ndarray,
-                          tsdf: o3d.pipelines.integration.ScalableTSDFVolume,
-                          intrinsics: o3d.camera.PinholeCameraIntrinsic,
-                          *, depth_trunc: float = 4.0) -> None:
-        """
-        Integrate the specified frame into the TSDF.
-
-        :param colour_image:        TODO
-        :param depth_image:         TODO
-        :param world_to_camera:     TODO
-        :param tsdf:                The TSDF.
-        :param intrinsics:          The camera intrinsics.
-        :param depth_trunc:         The depth truncation value (depths greater than this are ignored).
-        """
-        # Check that the colour and depth images are the same size.
-        if colour_image.shape[:2] != depth_image.shape:
-            raise RuntimeError("Cannot integrate the frame into the TSDF: the images are different sizes")
-
-        # Prepare the RGB-D image that will be integrated into the TSDF.
-        # noinspection PyArgumentList, PyCallByClass
-        rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-            o3d.geometry.Image(colour_image),
-            o3d.geometry.Image(depth_image),
-            depth_scale=1.0, depth_trunc=depth_trunc, convert_rgb_to_intensity=False
-        )
-
-        # Integrate the RGB-D image into the TSDF.
-        tsdf.integrate(rgbd_image, intrinsics, world_to_camera)
