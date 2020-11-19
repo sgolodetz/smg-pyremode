@@ -8,7 +8,7 @@ import smg.pyremode as pyremode
 from scipy.spatial.transform import Rotation
 from typing import Optional, Tuple
 
-from smg.geometry import GeometryUtil
+from smg.utility import GeometryUtil
 
 
 class DepthAssembler:

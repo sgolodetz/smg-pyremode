@@ -2,7 +2,7 @@ import numpy as np
 
 from typing import Tuple
 
-from smg.openni.openni_camera import OpenNICamera
+from smg.openni import OpenNICamera
 from smg.pyremode import RGBDImageSource
 
 

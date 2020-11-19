@@ -5,10 +5,10 @@ import open3d as o3d
 
 from typing import Optional, Tuple
 
-from smg.geometry import GeometryUtil
 from smg.openni import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import CONVERGED, DepthAssembler
+from smg.utility import GeometryUtil
 
 
 def add_axis(vis: o3d.visualization.Visualizer, pose: np.ndarray, *,
