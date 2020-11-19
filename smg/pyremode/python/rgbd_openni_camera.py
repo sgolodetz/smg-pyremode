@@ -21,6 +21,22 @@ class RGBDOpenNICamera(RGBDImageSource):
 
     # PUBLIC METHODS
 
+    def get_colour_dims(self) -> Tuple[int, int]:
+        """
+        TODO
+
+        :return:    TODO
+        """
+        return self.__camera.get_colour_dims()
+
+    def get_colour_intrinsics(self) -> Tuple[float, float, float, float]:
+        """
+        TODO
+
+        :return:    TODO
+        """
+        return self.__camera.get_colour_intrinsics()
+
     def get_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get colour and depth images from the image source.

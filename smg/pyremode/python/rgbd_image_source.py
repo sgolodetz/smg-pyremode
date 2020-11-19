@@ -10,6 +10,24 @@ class RGBDImageSource(ABC):
     # PUBLIC ABSTRACT METHODS
 
     @abstractmethod
+    def get_colour_dims(self) -> Tuple[int, int]:
+        """
+        TODO
+
+        :return:    TODO
+        """
+        pass
+
+    @abstractmethod
+    def get_colour_intrinsics(self) -> Tuple[float, float, float, float]:
+        """
+        TODO
+
+        :return:    TODO
+        """
+        pass
+
+    @abstractmethod
     def get_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get colour and depth images from the image source.
