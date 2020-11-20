@@ -2,6 +2,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
+import os
 import threading
 
 from typing import Optional
@@ -114,6 +115,8 @@ class RGBDMappingSystem:
         fx, fy, cx, cy = self.__image_source.get_colour_intrinsics()
         intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(width, height, fx, fy, cx, cy)
 
+        keyframe_idx: int = 0
+
         _, ax = plt.subplots(1, 3)
 
         # Until the mapping system should terminate:
@@ -123,18 +126,32 @@ class RGBDMappingSystem:
             if keyframe is not None:
                 colour_image, depth_image, pose, converged_percentage, convergence_map = keyframe
 
-                # If the keyframe hasn't sufficiently converged, don't fuse it.
-                if converged_percentage < 30.0:
-                    continue
-
                 # Post-process the depth image to keep only those pixels whose depth has converged.
                 depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
                 depth_image = np.where(depth_mask != 0, depth_image, 0).astype(np.float32)
 
-                # Integrate the keyframe into the map.
-                ReconstructionUtil.integrate_frame(
-                    ImageUtil.flip_channels(colour_image), depth_image, pose, intrinsics, self.__tsdf
-                )
+                # If the keyframe has sufficiently converged:
+                if converged_percentage >= 30.0:
+                    # Fuse it into the map.
+                    ReconstructionUtil.integrate_frame(
+                        ImageUtil.flip_channels(colour_image), depth_image, pose, intrinsics, self.__tsdf
+                    )
+
+                    # TODO: Make this optional.
+                    if True:
+                        # Save the images to disk so that they can be reconstructed later with SemanticPaint.
+                        output_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode"
+                        os.makedirs(output_dir, exist_ok=True)
+
+                        colour_filename = os.path.join(output_dir, f"frame-{keyframe_idx:06d}.color.png")
+                        depth_filename = os.path.join(output_dir, f"frame-{keyframe_idx:06d}.depth.png")
+                        pose_filename = os.path.join(output_dir, f"frame-{keyframe_idx:06d}.pose.txt")
+
+                        cv2.imwrite(colour_filename, colour_image)
+                        ImageUtil.save_depth_image(depth_filename, depth_image)
+                        RGBDMappingSystem.__save_pose(pose_filename, pose)
+
+                    keyframe_idx += 1
 
                 # Show the keyframe images for debugging purposes.
                 ax[0].clear()
@@ -146,3 +163,20 @@ class RGBDMappingSystem:
 
                 plt.draw()
                 plt.waitforbuttonpress(0.001)
+
+    # PRIVATE STATIC METHODS
+
+    @staticmethod
+    def __save_pose(pose_filename: str, pose: np.ndarray) -> None:
+        """
+        TODO
+
+        :param pose_filename:   TODO
+        :param pose:            TODO
+        """
+        # FIXME: Put this somewhere more central.
+        with open(pose_filename, "w") as f:
+            inv_pose: np.ndarray = np.linalg.inv(pose)
+            for i in range(4):
+                line = " ".join(map(str, inv_pose[i])) + "\r"
+                f.write(line)
