@@ -7,9 +7,8 @@ from typing import Optional, Tuple
 
 from smg.open3d import VisualisationUtil
 from smg.pyorbslam2 import MonocularTracker
+from smg.pyremode import CONVERGED, DepthAssembler, DepthDenoiser
 from smg.rotory.drone_factory import DroneFactory
-
-from smg.pyremode import CONVERGED, DepthAssembler
 from smg.utility import GeometryUtil
 
 
@@ -80,6 +79,13 @@ def main():
 
             # TODO
             depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
+            estimated_depth_image = np.where(depth_mask != 0, estimated_depth_image, 0.0).astype(np.float32)
+            estimated_depth_image = DepthDenoiser.denoise_depth(estimated_depth_image, intrinsics)
+            depth_mask = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
+
+            plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
+            plt.waitforbuttonpress()
+
             pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
                 reference_colour_image, estimated_depth_image, depth_mask, intrinsics
             )
@@ -88,10 +94,6 @@ def main():
             pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(pcd_points)
             pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
-
-            # Denoise the point cloud (slow).
-            pcd = pcd.uniform_down_sample(every_k_points=5)
-            pcd, _ = pcd.remove_statistical_outlier(20, 2.0)
 
             # Visualise the point cloud.
             VisualisationUtil.visualise_geometry(pcd)
