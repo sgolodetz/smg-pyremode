@@ -4,7 +4,7 @@ import setuptools
 #     long_description = fh.read()
 
 setuptools.setup(
-    name="smg-remode",
+    name="smg-pyremode",
     version="0.0.1",
     author="Stuart Golodetz",
     author_email="stuart.golodetz@cs.ox.ac.uk",
@@ -17,8 +17,8 @@ setuptools.setup(
     install_requires=[
         "numpy",
         "smg-open3d",
-        "smg-opencv",
         "smg-openni",
+        "smg-pyopencv",
         "smg-pyorbslam2",
         "smg-utility"
     ],
