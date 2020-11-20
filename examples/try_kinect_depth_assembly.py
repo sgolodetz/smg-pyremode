@@ -95,10 +95,11 @@ def main():
             pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
 
             # Denoise the point cloud (slow).
-            pcd = pcd.uniform_down_sample(every_k_points=5)
+            factor: int = 10
+            pcd = pcd.uniform_down_sample(every_k_points=factor)
             pcd, ind = pcd.remove_statistical_outlier(20, 2.0)
 
-            ind = list(map(lambda x: shuffle_indices[x * 5], ind))
+            ind = list(map(lambda x: shuffle_indices[x * factor], ind))
 
             ind_mask: np.ndarray = np.zeros(depth_image.shape, dtype=np.uint8)
             ind_mask = ind_mask.flatten()
@@ -107,8 +108,25 @@ def main():
 
             estimated_depth_image = np.where(ind_mask != 0, estimated_depth_image, 0.0).astype(np.float32)
 
+            depth_scale_factor: float = 1000.0
+            scaled_depth_image: np.ndarray = (estimated_depth_image * depth_scale_factor).astype(np.uint16)
+            kernel: np.ndarray = np.ones((5, 5), np.uint8)
+            scaled_depth_image = cv2.dilate(scaled_depth_image, kernel)
+
+            estimated_depth_image = scaled_depth_image.astype(np.float32) / depth_scale_factor
+
             plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
             plt.waitforbuttonpress()
+
+            depth_mask = np.where(scaled_depth_image != 0, 255, 0).astype(np.uint8)
+            pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
+                reference_colour_image, estimated_depth_image, depth_mask, intrinsics
+            )
+
+            # Convert the point cloud to Open3D format.
+            pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(pcd_points)
+            pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
 
             # Visualise the point cloud.
             VisualisationUtil.visualise_geometry(pcd)
