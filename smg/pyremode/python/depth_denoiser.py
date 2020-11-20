@@ -14,6 +14,7 @@ class DepthDenoiser:
 
     @staticmethod
     def denoise_depth(depth_image: np.ndarray, intrinsics: Tuple[float, float, float, float]) -> np.ndarray:
+        # TODO: Update all of this.
         """
         Denoise the specified depth image.
 
@@ -68,15 +69,17 @@ class DepthDenoiser:
         ind_mask = ind_mask.reshape(depth_image.shape, order='C')
 
         # Mask out the outliers in the depth image.
-        depth_image = np.where(ind_mask != 0, depth_image, 0.0).astype(np.float32)
+        filtered_depth_image: np.ndarray = np.where(ind_mask != 0, depth_image, 0.0).astype(np.float32)
 
         # Convert the floating-point depth image to a short depth image so that it can be dilated.
         depth_scale_factor: float = 1000.0
-        scaled_depth_image: np.ndarray = (depth_image * depth_scale_factor).astype(np.uint16)
+        short_depth_image: np.ndarray = (filtered_depth_image * depth_scale_factor).astype(np.uint16)
 
         # Dilate the short depth image.
         kernel: np.ndarray = np.ones((5, 5), np.uint8)
-        scaled_depth_image = cv2.dilate(scaled_depth_image, kernel)
+        short_depth_image = cv2.dilate(short_depth_image, kernel)
 
         # Convert the dilated short depth image back to a floating-point depth image and return it.
-        return scaled_depth_image.astype(np.float32) / depth_scale_factor
+        dilated_depth_image: np.ndarray = short_depth_image.astype(np.float32) / depth_scale_factor
+
+        return np.where(np.fabs(dilated_depth_image - depth_image) < 0.02, depth_image, 0.0).astype(np.float32)
