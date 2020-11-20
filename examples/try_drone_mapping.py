@@ -5,22 +5,22 @@ import os
 from typing import Optional
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
-from smg.openni import OpenNICamera
 from smg.pyorbslam2 import MonocularTracker
-from smg.pyremode import DepthEstimator, MonocularMappingSystem, RGBDOpenNICamera, \
-    RGBFromRGBDImageSource, RGBImageSource, TemporalKeyframeDepthEstimator
+from smg.pyremode import DepthEstimator, MonocularMappingSystem, RGBDroneCamera, RGBImageSource, \
+    TemporalKeyframeDepthEstimator
+from smg.rotory.drones.tello import Tello
 
 
 def main():
     # noinspection PyUnusedLocal
     tsdf: Optional[o3d.pipelines.integration.ScalableTSDFVolume] = None
 
-    with OpenNICamera(mirror_images=True) as camera:
+    with Tello(print_commands=False, print_responses=False, print_state_messages=False) as drone:
         with MonocularTracker(
-            settings_file=f"settings-kinect.yaml", use_viewer=True,
+            settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            image_source: RGBImageSource = RGBFromRGBDImageSource(RGBDOpenNICamera(camera))
+            image_source: RGBImageSource = RGBDroneCamera(drone)
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
                 image_source.get_image_dims(), image_source.get_intrinsics()
             )

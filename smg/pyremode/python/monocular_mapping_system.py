@@ -8,7 +8,7 @@ from typing import Optional
 
 from smg.open3d import ReconstructionUtil
 from smg.pyorbslam2 import MonocularTracker
-from smg.pyremode import CONVERGED, DepthEstimator, RGBImageSource, UPDATE
+from smg.pyremode import CONVERGED, DepthEstimator, RGBImageSource
 from smg.utility import ImageUtil
 
 
@@ -123,9 +123,8 @@ class MonocularMappingSystem:
             if keyframe is not None:
                 colour_image, depth_image, pose, converged_percentage, convergence_map = keyframe
 
-                # Post-process the depth image to keep only useful pixels.
+                # Post-process the depth image to keep only those pixels whose depth has converged.
                 depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
-                # depth_mask: np.ndarray = np.where(depth_image != 0, 255, 0).astype(np.uint8)
                 depth_image = np.where(depth_mask != 0, depth_image, 0).astype(np.float32)
 
                 # If the keyframe has sufficiently converged:
