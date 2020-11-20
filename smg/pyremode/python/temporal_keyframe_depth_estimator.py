@@ -55,17 +55,6 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         """
         Try to add a colour image with a known pose to the depth estimator.
 
-        .. note::
-            This is intended to be non-blocking, for performance reasons, and so any particular image passed in
-            may in practice be silently dropped rather than being used as part of the depth estimation process.
-            The intended use case is to pass in a stream of images from a camera, and let the depth estimator
-            use the ones it can. It is of course possible to write a depth estimator that uses every image that's
-            passed to it, if desired, but that would necessarily involve blocking if the estimator can't keep up,
-            which would slow down the calling thread. An alternative approach of buffering the images that are
-            passed in until the estimator's ready for them is also possible, but with finite memory, there's
-            eventually going to come a point where an estimator that can't keep up has to drop some images.
-            Given this, a non-blocking put function with no buffering seems best.
-
         :param input_colour_image:  The input colour image.
         :param input_pose:          The input camera pose (denoting a transformation from camera space to world space).
         """

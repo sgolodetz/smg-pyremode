@@ -28,8 +28,8 @@ class DepthAssembler:
         """
         self.__image_size: Tuple[int, int] = image_size
         self.__input_colour_image: Optional[np.ndarray] = None
-        self.__input_is_ready: bool = False
         self.__input_is_keyframe: bool = True
+        self.__input_is_pending: bool = False
         self.__input_pose: Optional[np.ndarray] = None
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
         self.__keyframe_colour_image: Optional[np.ndarray] = None
@@ -46,7 +46,8 @@ class DepthAssembler:
         self.__get_lock = threading.Lock()
         self.__put_lock = threading.Lock()
 
-        self.__input_ready = threading.Condition(self.__put_lock)
+        self.__input_not_pending = threading.Condition(self.__put_lock)
+        self.__input_pending = threading.Condition(self.__put_lock)
         self.__output_available = threading.Condition(self.__get_lock)
 
         # Start the assembly thread.
@@ -98,12 +99,6 @@ class DepthAssembler:
         Try to add a colour image with a known pose to the depth assembler.
 
         .. note::
-            It normally makes sense to set blocking to False, since the rate at which images arrive from the camera
-            will generally be higher than the rate at which they can be processed. If blocking is set to False, the
-            depth assembler will naturally be fed images at the rate at which it can process them, rather than having
-            to keep a queue of images to process in the future. However, there may be times when we want to ensure
-            that every single image passed to the assembler is processed, in which case blocking can be set to True.
-        .. note::
             For clarity, there are two different scenarios in which this function can return
             without having added the colour image to the assembler:
              (i) The lock cannot be acquired, and we're unwilling to wait for it.
@@ -113,24 +108,19 @@ class DepthAssembler:
         :param input_pose:          The input camera pose (denoting a transformation from camera space to world space).
         :param blocking:            Whether or not to block until the image is successfully added.
         """
-        # Try to acquire the lock, waiting for it iff allowed.
-        acquired: bool = False
-        if blocking:
-            while not acquired:
-                acquired = self.__put_lock.acquire(blocking=True, timeout=0.1)
-                if self.__should_terminate:
-                    return
-        else:
-            acquired = self.__put_lock.acquire(blocking=False)
-            if not acquired:
-                return
+        with self.__put_lock:
+            # If we're allowed to, wait for the assembly thread to pick up any pending inputs.
+            if blocking:
+                while self.__input_is_pending:
+                    self.__input_not_pending.wait(0.1)
+                    if self.__should_terminate:
+                        return
 
-        # Store the input colour image and pose, and alert the assembly thread.
-        self.__input_colour_image = input_colour_image
-        self.__input_pose = input_pose
-        self.__input_is_ready = True
-        self.__input_ready.notify()
-        self.__put_lock.release()
+            # Store the inputs and alert the assembly thread.
+            self.__input_colour_image = input_colour_image
+            self.__input_pose = input_pose
+            self.__input_is_pending = True
+            self.__input_pending.notify()
 
     def terminate(self) -> None:
         """Tell the depth assembler to terminate."""
@@ -146,17 +136,16 @@ class DepthAssembler:
         while not self.__should_terminate:
             with self.__put_lock:
                 # Wait for a new input image and pose.
-                while not self.__input_is_ready:
-                    self.__input_ready.wait(0.1)
-
-                    # If the assembler is told to terminate whilst waiting for inputs, early out.
+                while not self.__input_is_pending:
+                    self.__input_pending.wait(0.1)
                     if self.__should_terminate:
                         return
 
-                # Make local references to the inputs so that we can release the lock as soon as possible.
+                # Make local references to the inputs so that we can accept new inputs as soon as possible.
                 input_colour_image: np.ndarray = self.__input_colour_image
                 input_pose: np.ndarray = self.__input_pose
-                self.__input_is_ready = False
+                self.__input_is_pending = False
+                self.__input_not_pending.notify()
 
             # Convert the input image to greyscale.
             grey_image: np.ndarray = cv2.cvtColor(input_colour_image, cv2.COLOR_BGR2GRAY)
