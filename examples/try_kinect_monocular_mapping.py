@@ -2,7 +2,7 @@ import cv2
 import open3d as o3d
 import os
 
-from typing import Optional
+from typing import Optional, Tuple
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
 from smg.openni import OpenNICamera
@@ -17,16 +17,18 @@ def main():
     tsdf: Optional[o3d.pipelines.integration.ScalableTSDFVolume] = None
 
     # with OpenNICamera(mirror_images=True) as camera:
-    with Tello(local_ip="192.168.10.2", print_commands=False, print_responses=False, print_state_messages=False) as drone:
+    with Tello(print_commands=False, print_responses=False, print_state_messages=False) as drone:
         with MonocularTracker(
             settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            image_dims = (960, 720)
-            intrinsics = 938.55289501, 932.86950291, 480.0, 360.0
-            depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-                image_dims, intrinsics
-            )
+            image_size: Tuple[int, int] = drone.get_image_size()
+            intrinsics: Optional[Tuple[float, float, float, float]] = drone.get_intrinsics()
+            if intrinsics is None:
+                raise RuntimeError("Cannot get drone camera intrinsics")
+
+            depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(image_size, intrinsics)
+
             with MonocularMappingSystem(
                 RGBDroneCamera(drone), tracker, depth_estimator
             ) as system:

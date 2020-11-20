@@ -23,7 +23,7 @@ def print_se3(se3: SE3f) -> None:
 
 
 def main():
-    with DroneFactory.make_drone("tello", local_ip="192.168.10.3") as drone:
+    with DroneFactory.make_drone("tello") as drone:
         with MonocularTracker(
             settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
@@ -41,22 +41,7 @@ def main():
             _, ax = plt.subplots(2, 2)
 
             while True:
-                distorted_image = drone.get_image()
-
-                # camera_matrix: np.ndarray = np.array([
-                #     [946.60441222, 0., 460.29254907],
-                #     [0., 941.38386885, 357.08431882],
-                #     [0., 0., 1.]
-                # ])
-                # dist_coeffs: np.ndarray = np.array([[0.04968041, -0.59998154, -0.00377696, -0.00863985, 2.14472665]])
-                camera_matrix: np.ndarray = np.array([
-                    [938.55289501, 0., 480.],
-                    [0., 932.86950291, 360.],
-                    [0., 0., 1.]
-                ])
-                dist_coeffs: np.ndarray = np.array([[0.03306774, -0.40497806, -0.00216106, -0.00294729, 1.31711308]])
-                colour_image = cv2.undistort(distorted_image, camera_matrix, dist_coeffs)
-
+                colour_image: np.ndarray = drone.get_image()
                 cv2.imshow("Image", colour_image)
                 cv2.waitKey(1)
 
