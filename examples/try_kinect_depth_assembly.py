@@ -81,6 +81,14 @@ def main():
                 reference_colour_image, estimated_depth_image, depth_mask, intrinsics
             )
 
+            rng_state = np.random.get_state()
+            shuffle_indices = np.array(range(len(pcd_points)))
+            np.random.shuffle(shuffle_indices)
+            np.random.set_state(rng_state)
+            np.random.shuffle(pcd_points)
+            np.random.set_state(rng_state)
+            np.random.shuffle(pcd_colours)
+
             # Convert the point cloud to Open3D format.
             pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(pcd_points)
@@ -88,7 +96,19 @@ def main():
 
             # Denoise the point cloud (slow).
             pcd = pcd.uniform_down_sample(every_k_points=5)
-            pcd, _ = pcd.remove_statistical_outlier(20, 2.0)
+            pcd, ind = pcd.remove_statistical_outlier(20, 2.0)
+
+            ind = list(map(lambda x: shuffle_indices[x * 5], ind))
+
+            ind_mask: np.ndarray = np.zeros(depth_image.shape, dtype=np.uint8)
+            ind_mask = ind_mask.flatten()
+            ind_mask[ind] = 255
+            ind_mask = ind_mask.reshape(depth_image.shape, order='C')
+
+            estimated_depth_image = np.where(ind_mask != 0, estimated_depth_image, 0.0).astype(np.float32)
+
+            plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
+            plt.waitforbuttonpress()
 
             # Visualise the point cloud.
             VisualisationUtil.visualise_geometry(pcd)
