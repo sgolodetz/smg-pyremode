@@ -4,7 +4,7 @@ import numpy as np
 import open3d as o3d
 
 from scipy.spatial.transform import Rotation
-from typing import Optional
+from typing import Optional, Tuple
 
 from smg.open3d import VisualisationUtil
 from smg.pyopencv import CVMat1b
@@ -28,9 +28,14 @@ def main():
             settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            # fx, fy, cx, cy = 946.60441222, 941.38386885, 460.29254907, 357.08431882
-            fx, fy, cx, cy = 938.55289501, 932.86950291, 480.0, 360.0
-            depthmap: Depthmap = Depthmap(960, 720, fx, cx, fy, cy)
+            intrinsics: Optional[Tuple[float, float, float, float]] = drone.get_intrinsics()
+            if intrinsics is None:
+                raise RuntimeError("Cannot get drone camera intrinsics")
+
+            width, height = drone.get_image_size()
+            fx, fy, cx, cy = intrinsics
+            depthmap: Depthmap = Depthmap(width, height, fx, cx, fy, cy)
+
             reference_colour_image: Optional[np.ndarray] = None
 
             _, ax = plt.subplots(2, 2)
