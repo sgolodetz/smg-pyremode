@@ -31,12 +31,13 @@ def main():
             width, height = drone.get_image_size()
             fx, fy, cx, cy = intrinsics
             depthmap: Depthmap = Depthmap(width, height, fx, cx, fy, cy)
+
             reference_colour_image: Optional[np.ndarray] = None
 
             _, ax = plt.subplots(2, 2)
 
             while True:
-                colour_image = drone.get_image()
+                colour_image: np.ndarray = drone.get_image()
                 cv2.imshow("Image", colour_image)
                 cv2.waitKey(1)
 

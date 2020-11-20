@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import Tuple
+from typing import cast, Optional, Tuple
 
 from smg.pyremode import RGBImageSource
 from smg.rotory.drones.drone import Drone
@@ -18,6 +18,9 @@ class RGBDroneCamera(RGBImageSource):
         :param drone:   The drone to wrap.
         """
         self.__drone: Drone = drone
+        self.__intrinsics: Optional[Tuple[float, float, float, float]] = drone.get_intrinsics()
+        if self.__intrinsics is None:
+            raise RuntimeError("Cannot get drone camera intrinsics")
 
     # PUBLIC METHODS
 
@@ -35,9 +38,7 @@ class RGBDroneCamera(RGBImageSource):
 
         :return:    The dimensions of the images, as a (width, height) tuple.
         """
-        # FIXME: These parameters are for the Tello.
-        return 960, 720
-        # return self.__drone
+        return self.__drone.get_image_size()
 
     def get_intrinsics(self) -> Tuple[float, float, float, float]:
         """
@@ -45,6 +46,4 @@ class RGBDroneCamera(RGBImageSource):
 
         :return:    The camera intrinsics, as an (fx, fy, cx, cy) tuple.
         """
-        # FIXME: These parameters are for the Tello.
-        return 921.0, 921.0, 480.0, 360.0
-        # return self.__drone.get_intrinsics()
+        return cast(Tuple[float, float, float, float], self.__intrinsics)

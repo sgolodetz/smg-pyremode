@@ -123,18 +123,16 @@ class MonocularMappingSystem:
             if keyframe is not None:
                 colour_image, depth_image, pose, converged_percentage, convergence_map = keyframe
 
-                # If the keyframe hasn't sufficiently converged, don't fuse it.
-                if converged_percentage < 30.0:
-                    continue
-
                 # Post-process the depth image to keep only those pixels whose depth has converged.
                 depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
                 depth_image = np.where(depth_mask != 0, depth_image, 0).astype(np.float32)
 
-                # Integrate the keyframe into the map.
-                ReconstructionUtil.integrate_frame(
-                    ImageUtil.flip_channels(colour_image), depth_image, pose, intrinsics, self.__tsdf
-                )
+                # If the keyframe has sufficiently converged:
+                if converged_percentage >= 30.0:
+                    # Fuse it into the map.
+                    ReconstructionUtil.integrate_frame(
+                        ImageUtil.flip_channels(colour_image), depth_image, pose, intrinsics, self.__tsdf
+                    )
 
                 # Show the keyframe images for debugging purposes.
                 ax[0].clear()
