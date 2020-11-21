@@ -1,6 +1,5 @@
 import cv2
 import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
 import numpy as np
 import open3d as o3d
 
@@ -11,27 +10,6 @@ from smg.openni import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import CONVERGED, DepthAssembler, DepthDenoiser
 from smg.utility import GeometryUtil
-
-
-def densify_depth_image(input_depth_image: np.ndarray) -> Tuple[np.ndarray, mtri.Triangulation]:
-    iy, ix = np.nonzero(input_depth_image)
-    iz = input_depth_image[(iy, ix)]
-    triangulation: mtri.Triangulation = mtri.Triangulation(ix, iy)
-
-    # See: https://stackoverflow.com/questions/52457964/how-to-deal-with-the-undesired-triangles-that-form-between-the-edges-of-my-geo
-    max_radius = 5
-    triangles = triangulation.triangles
-    xtri = ix[triangles] - np.roll(ix[triangles], 1, axis=1)
-    ytri = iy[triangles] - np.roll(iy[triangles], 1, axis=1)
-    maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
-    triangulation.set_mask(maxi > max_radius)
-
-    oy, ox = np.nonzero(np.ones_like(input_depth_image))
-    interpolator: mtri.LinearTriInterpolator = mtri.LinearTriInterpolator(triangulation, iz)
-    result: np.ma.core.MaskedArray = interpolator(ox, oy)
-    output_depth_image: np.ndarray = np.where(result.mask, 0.0, result.data).astype(np.float32)
-    output_depth_image = output_depth_image.reshape(input_depth_image.shape)
-    return output_depth_image, triangulation
 
 
 def main():
@@ -103,7 +81,7 @@ def main():
             # estimated_depth_image = DepthDenoiser.denoise_depth(estimated_depth_image, intrinsics)
             # depth_mask = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
             estimated_depth_image = DepthDenoiser.denoise_depth_ex(estimated_depth_image, convergence_map, intrinsics)
-            estimated_depth_image, _ = densify_depth_image(estimated_depth_image)
+            estimated_depth_image, _ = DepthDenoiser.densify_depth_image(estimated_depth_image)
             depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
 
             plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)

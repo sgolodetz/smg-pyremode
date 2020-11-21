@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.tri as mtri
 import numpy as np
 import open3d as o3d
 
@@ -157,3 +158,26 @@ class DepthDenoiser:
         dilated_depth_image: np.ndarray = short_depth_image.astype(np.float32) / depth_scale_factor
 
         return np.where(np.fabs(dilated_depth_image - raw_depth_image) < 0.02, raw_depth_image, 0.0).astype(np.float32)
+
+    @staticmethod
+    def densify_depth_image(input_depth_image: np.ndarray) -> Tuple[np.ndarray, mtri.Triangulation]:
+        iy, ix = np.nonzero(input_depth_image)
+        iz = input_depth_image[(iy, ix)]
+        triangulation: mtri.Triangulation = mtri.Triangulation(ix, iy)
+
+        # See: https://stackoverflow.com/questions/52457964/how-to-deal-with-the-undesired-triangles-that-form-between-the-edges-of-my-geo
+        # max_radius = 5
+        triangles = triangulation.triangles
+        # xtri = ix[triangles] - np.roll(ix[triangles], 1, axis=1)
+        # ytri = iy[triangles] - np.roll(iy[triangles], 1, axis=1)
+        # maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
+        # triangulation.set_mask(maxi > max_radius)
+        ztri = np.fabs(iz[triangles] - np.roll(iz[triangles], 1, axis=1))
+        triangulation.set_mask(np.max(ztri, axis=1) > 0.02)
+
+        oy, ox = np.nonzero(np.ones_like(input_depth_image))
+        interpolator: mtri.LinearTriInterpolator = mtri.LinearTriInterpolator(triangulation, iz)
+        result: np.ma.core.MaskedArray = interpolator(ox, oy)
+        output_depth_image: np.ndarray = np.where(result.mask, 0.0, result.data).astype(np.float32)
+        output_depth_image = output_depth_image.reshape(input_depth_image.shape)
+        return output_depth_image, triangulation
