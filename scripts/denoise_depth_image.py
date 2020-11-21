@@ -17,6 +17,7 @@ def load_depth_image(filename: str, *, depth_scale_factor: float = 1000.0) -> np
     :param depth_scale_factor:  TODO
     :return:                    TODO
     """
+    # TODO: Move this to ImageUtil.
     return cv2.imread(filename, cv2.IMREAD_UNCHANGED) / depth_scale_factor
 
 
