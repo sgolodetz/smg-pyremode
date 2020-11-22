@@ -1,4 +1,3 @@
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,18 +8,6 @@ from smg.pyremode import DepthDenoiser
 from smg.utility import ImageUtil
 
 
-def load_depth_image(filename: str, *, depth_scale_factor: float = 1000.0) -> np.ndarray:
-    """
-    TODO
-
-    :param filename:            TODO
-    :param depth_scale_factor:  TODO
-    :return:                    TODO
-    """
-    # TODO: Move this to ImageUtil.
-    return cv2.imread(filename, cv2.IMREAD_UNCHANGED) / depth_scale_factor
-
-
 def main():
     # Parse any command-line arguments.
     parser = ArgumentParser()
@@ -28,7 +15,7 @@ def main():
     parser.add_argument("--output_file", "-o", type=str, required=True, help="the output file")
     args: dict = vars(parser.parse_args())
 
-    input_depth_image: np.ndarray = load_depth_image(args["input_file"])
+    input_depth_image: np.ndarray = ImageUtil.load_depth_image(args["input_file"])
     intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
     output_depth_image: np.ndarray = DepthDenoiser.denoise_depth(input_depth_image, intrinsics)
 
