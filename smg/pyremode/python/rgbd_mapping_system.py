@@ -21,16 +21,20 @@ class RGBDMappingSystem:
 
     # CONSTRUCTOR
 
-    def __init__(self, image_source: RGBDImageSource, tracker: RGBDTracker, depth_estimator: DepthEstimator):
+    def __init__(self, image_source: RGBDImageSource, tracker: RGBDTracker, depth_estimator: DepthEstimator, *,
+                 output_dir: Optional[str] = None):
         """
         Construct an RGB-D mapping system.
 
         :param image_source:    A source of RGB-D images.
         :param tracker:         The RGB-D tracker to use.
         :param depth_estimator: The depth estimator to use.
+        :param output_dir:      An optional directory into which to save the sequence of RGB-D keyframes
+                                so that they can be reconstructed again (or otherwise processed) later.
         """
         self.__depth_estimator: DepthEstimator = depth_estimator
         self.__image_source: RGBDImageSource = image_source
+        self.__output_dir: Optional[str] = output_dir
         self.__should_terminate: bool = False
         self.__tracker: RGBDTracker = tracker
 
@@ -132,25 +136,24 @@ class RGBDMappingSystem:
 
                 # If the keyframe has sufficiently converged:
                 if converged_percentage >= 30.0:
-                    # Fuse it into the map.
+                    # Fuse the keyframe into the map.
                     ReconstructionUtil.integrate_frame(
                         ImageUtil.flip_channels(colour_image), depth_image, pose, intrinsics, self.__tsdf
                     )
 
-                    # TODO: Make this optional.
-                    if True:
-                        # Save the images to disk so that they can be reconstructed later with SemanticPaint.
-                        output_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode"
-                        os.makedirs(output_dir, exist_ok=True)
+                    # If an output directory has been specified, also save the keyframe to disk for later use.
+                    if self.__output_dir:
+                        os.makedirs(self.__output_dir, exist_ok=True)
 
-                        colour_filename = os.path.join(output_dir, f"frame-{keyframe_idx:06d}.color.png")
-                        depth_filename = os.path.join(output_dir, f"frame-{keyframe_idx:06d}.depth.png")
-                        pose_filename = os.path.join(output_dir, f"frame-{keyframe_idx:06d}.pose.txt")
+                        colour_filename = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.color.png")
+                        depth_filename = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.depth.png")
+                        pose_filename = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.pose.txt")
 
                         cv2.imwrite(colour_filename, colour_image)
                         ImageUtil.save_depth_image(depth_filename, depth_image)
                         PoseUtil.save_pose(pose_filename, np.linalg.inv(pose))
 
+                    # Increment the keyframe index.
                     keyframe_idx += 1
 
                 # Show the keyframe images for debugging purposes.
