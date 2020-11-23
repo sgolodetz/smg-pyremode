@@ -46,7 +46,7 @@ def main():
                     continue
 
                 # TODO
-                depth_assembler.put(colour_image, pose, blocking=False)
+                depth_assembler.put(colour_image, pose)
 
                 # TODO
                 if is_keyframe:

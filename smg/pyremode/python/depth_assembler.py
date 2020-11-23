@@ -94,23 +94,26 @@ class DepthAssembler:
             # If the lock can't be acquired right now, and we don't want to wait for it, early out.
             return None
 
-    def put(self, input_colour_image: np.ndarray, input_pose: np.ndarray, *, blocking: bool) -> None:
+    def put(self, input_colour_image: np.ndarray, input_pose: np.ndarray, *, wait_for_pending: bool = True) -> None:
         """
         Try to add a colour image with a known pose to the depth assembler.
 
         .. note::
-            For clarity, there are two different scenarios in which this function can return
-            without having added the colour image to the assembler:
-             (i) The lock cannot be acquired, and we're unwilling to wait for it.
-            (ii) The depth assembler is told to terminate whilst we're waiting for the lock.
+            This function can only return without having added the new inputs to the assembler if the
+            assembler is told to terminate whilst it's running. However, if wait_for_pending is set
+            to False, the new inputs may later be overwritten before they can actually be picked up
+            by the assembly thread. That's normally undesirable, hence the default argument, but
+            there can be times when we're feeding the assembler inputs at such a rapid rate that
+            waiting for pending inputs would slow things down unnecessarily.
 
         :param input_colour_image:  The input colour image.
         :param input_pose:          The input camera pose (denoting a transformation from camera space to world space).
-        :param blocking:            Whether or not to block until the image is successfully added.
+        :param wait_for_pending:    Whether or not to wait until any pending inputs have been processed before adding
+                                    the new inputs.
         """
         with self.__put_lock:
             # If we're allowed to, wait for the assembly thread to pick up any pending inputs.
-            if blocking:
+            if wait_for_pending:
                 while self.__input_is_pending:
                     self.__input_not_pending.wait(0.1)
                     if self.__should_terminate:

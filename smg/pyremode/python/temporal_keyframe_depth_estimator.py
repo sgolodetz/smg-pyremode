@@ -108,7 +108,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
         # Add the input colour image and pose to the back assembler, and update the image count
         # that is used to keep track of when to move on to the next keyframe.
-        self.__back_assembler.put(input_colour_image, input_pose, blocking=True)
+        self.__back_assembler.put(input_colour_image, input_pose)
         self.__keyframe_image_count += 1
 
     def get_keyframe(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]]:
