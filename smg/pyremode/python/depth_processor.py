@@ -133,7 +133,7 @@ class DepthProcessor:
         maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
         ztri = np.fabs(iz[triangles] - np.roll(iz[triangles], 1, axis=1))
         # triangulation.set_mask((maxi > max_radius) | (np.max(ztri, axis=1) > 0.02))
-        triangulation.set_mask((np.max(ztri, axis=1) > 0.05))
+        triangulation.set_mask((maxi < 2) | (np.max(ztri, axis=1) > 0.05))
 
         oy, ox = np.nonzero(np.ones_like(input_depth_image))
         interpolator: mtri.LinearTriInterpolator = mtri.LinearTriInterpolator(triangulation, iz)

@@ -47,7 +47,7 @@ def main():
         # depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
         # depth_image = np.where(depth_mask != 0, depth_image, 0.0).astype(np.float32)
         depth_image = DepthProcessor.denoise_depth(depth_image, convergence_map, intrinsics)
-        depth_image = DepthProcessor.densify_depth_image(depth_image)[0]
+        # depth_image = DepthProcessor.densify_depth_image(depth_image)[0]
 
         # TODO
         # depth_mask: np.ndarray = np.where(depth_image != 0, 255, 0).astype(np.uint8)
@@ -61,10 +61,17 @@ def main():
         ReconstructionUtil.integrate_frame(
             ImageUtil.flip_channels(colour_image), depth_image, pose, o3d_intrinsics, tsdf
         )
-        mesh: o3d.geometry.TriangleMesh = ReconstructionUtil.make_mesh(tsdf)
-        VisualisationUtil.visualise_geometry(mesh)
+
+        # mesh: o3d.geometry.TriangleMesh = ReconstructionUtil.make_mesh(tsdf)
+        # VisualisationUtil.visualise_geometry(mesh)
+
+        # grid = o3d.geometry.VoxelGrid.create_from_point_cloud(tsdf.extract_point_cloud(), voxel_size=0.01)
+        # VisualisationUtil.visualise_geometry(grid)
 
         frame_idx += 1
+
+    grid = o3d.geometry.VoxelGrid.create_from_point_cloud(tsdf.extract_point_cloud(), voxel_size=0.01)
+    VisualisationUtil.visualise_geometry(grid)
 
 
 if __name__ == "__main__":
