@@ -20,9 +20,12 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-                camera.get_colour_dims(), camera.get_colour_intrinsics()
+                camera.get_colour_dims(), camera.get_colour_intrinsics(), max_images_per_keyframe=30
             )
-            with RGBDMappingSystem(RGBDOpenNICamera(camera), tracker, depth_estimator) as system:
+            with RGBDMappingSystem(
+                RGBDOpenNICamera(camera), tracker, depth_estimator,
+                output_dir="C:/spaint/build/bin/apps/spaintgui/sequences/remode"
+            ) as system:
                 tsdf = system.run()
 
             # If ORB-SLAM's not ready yet, forcibly terminate the whole process (this isn't graceful, but

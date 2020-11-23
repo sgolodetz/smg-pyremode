@@ -11,4 +11,5 @@ from .python.rgb_drone_camera import RGBDroneCamera
 from .python.rgb_from_rgbd_image_source import RGBFromRGBDImageSource
 from .python.rgbd_openni_camera import RGBDOpenNICamera
 
+from .python.monocular_mapping_system import MonocularMappingSystem
 from .python.rgbd_mapping_system import RGBDMappingSystem

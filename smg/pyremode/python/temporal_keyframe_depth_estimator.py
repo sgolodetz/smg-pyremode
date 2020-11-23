@@ -15,7 +15,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
                  min_converged_percentage: float = 40.0, min_depth: float = 0.1, max_depth: float = 4.0,
-                 min_images_per_keyframe: int = 30, max_images_per_keyframe: int = 30):
+                 min_images_per_keyframe: int = 30, max_images_per_keyframe: int = 150):
         """
         Construct a temporal keyframe depth estimator.
 
