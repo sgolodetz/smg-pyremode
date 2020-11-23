@@ -1,8 +1,8 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import open3d as o3d
+import os
 import threading
 
 from typing import Optional
