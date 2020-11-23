@@ -22,10 +22,10 @@ class MonocularMappingSystem:
 
     def __init__(self, image_source: RGBImageSource, tracker: MonocularTracker, depth_estimator: DepthEstimator):
         """
-        Construct an RGB-D mapping system.
+        Construct a monocular mapping system.
 
-        :param image_source:    A source of RGB-D images.
-        :param tracker:         The RGB-D tracker to use.
+        :param image_source:    A source of RGB images.
+        :param tracker:         The monocular tracker to use.
         :param depth_estimator: The depth estimator to use.
         """
         self.__depth_estimator: DepthEstimator = depth_estimator
@@ -64,10 +64,10 @@ class MonocularMappingSystem:
 
         # Until the mapping system should terminate:
         while not self.__should_terminate:
-            # Get the latest images from the image source.
+            # Get the latest image from the image source.
             colour_image = self.__image_source.get_image()
 
-            # Show the colour image so that the user can see what's going on. If the user presses 'q',
+            # Show the image so that the user can see what's going on. If the user presses 'q',
             # tell the mapping system to terminate, and early out.
             cv2.imshow("Tracking Image", colour_image)
             c: int = cv2.waitKey(1)
