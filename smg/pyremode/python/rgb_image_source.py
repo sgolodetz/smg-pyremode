@@ -35,3 +35,8 @@ class RGBImageSource(ABC):
         :return:    The camera intrinsics, as an (fx, fy, cx, cy) tuple.
         """
         pass
+
+    @abstractmethod
+    def terminate(self) -> None:
+        """Tell the image source to terminate."""
+        pass

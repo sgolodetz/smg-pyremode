@@ -44,3 +44,7 @@ class RGBFromRGBDImageSource(RGBImageSource):
         :return:    The camera intrinsics, as an (fx, fy, cx, cy) tuple.
         """
         return self.__image_source.get_colour_intrinsics()
+
+    def terminate(self) -> None:
+        """Tell the image source to terminate."""
+        self.__image_source.terminate()

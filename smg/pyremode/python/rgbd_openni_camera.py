@@ -44,3 +44,7 @@ class RGBDOpenNICamera(RGBDImageSource):
         :return:    A tuple consisting of a colour image and a depth image from the image source (in that order).
         """
         return self.__camera.get_images()
+
+    def terminate(self) -> None:
+        """Tell the image source to terminate."""
+        self.__camera.terminate()

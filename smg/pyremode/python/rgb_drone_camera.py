@@ -47,3 +47,7 @@ class RGBDroneCamera(RGBImageSource):
         :return:    The camera intrinsics, as an (fx, fy, cx, cy) tuple.
         """
         return cast(Tuple[float, float, float, float], self.__intrinsics)
+
+    def terminate(self) -> None:
+        """Tell the image source to terminate."""
+        self.__drone.terminate()
