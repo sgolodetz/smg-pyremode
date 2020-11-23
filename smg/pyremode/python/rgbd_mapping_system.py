@@ -10,7 +10,7 @@ from typing import Optional
 from smg.open3d import ReconstructionUtil
 from smg.pyorbslam2 import RGBDTracker
 from smg.pyremode import CONVERGED, DepthEstimator, RGBDImageSource
-from smg.utility import ImageUtil
+from smg.utility import ImageUtil, PoseUtil
 
 
 class RGBDMappingSystem:
@@ -149,7 +149,7 @@ class RGBDMappingSystem:
 
                         cv2.imwrite(colour_filename, colour_image)
                         ImageUtil.save_depth_image(depth_filename, depth_image)
-                        RGBDMappingSystem.__save_pose(pose_filename, pose)
+                        PoseUtil.save_pose(pose_filename, np.linalg.inv(pose))
 
                     keyframe_idx += 1
 
@@ -163,20 +163,3 @@ class RGBDMappingSystem:
 
                 plt.draw()
                 plt.waitforbuttonpress(0.001)
-
-    # PRIVATE STATIC METHODS
-
-    @staticmethod
-    def __save_pose(pose_filename: str, pose: np.ndarray) -> None:
-        """
-        TODO
-
-        :param pose_filename:   TODO
-        :param pose:            TODO
-        """
-        # FIXME: Put this somewhere more central.
-        with open(pose_filename, "w") as f:
-            inv_pose: np.ndarray = np.linalg.inv(pose)
-            for i in range(4):
-                line = " ".join(map(str, inv_pose[i])) + "\r"
-                f.write(line)
