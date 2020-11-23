@@ -131,6 +131,7 @@ class RGBDMappingSystem:
                 colour_image, depth_image, pose, converged_percentage, convergence_map = keyframe
 
                 # Post-process the depth image to keep only those pixels whose depth has converged.
+                original_depth_image: np.ndarray = depth_image.copy()
                 depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
                 depth_image = np.where(depth_mask != 0, depth_image, 0).astype(np.float32)
 
@@ -145,12 +146,16 @@ class RGBDMappingSystem:
                     if self.__output_dir:
                         os.makedirs(self.__output_dir, exist_ok=True)
 
-                        colour_filename = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.color.png")
-                        depth_filename = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.depth.png")
-                        pose_filename = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.pose.txt")
+                        colour_filename: str = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.color.png")
+                        convergence_filename: str = os.path.join(
+                            self.__output_dir, f"frame-{keyframe_idx:06d}.convergence.png"
+                        )
+                        depth_filename: str = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.depth.png")
+                        pose_filename: str = os.path.join(self.__output_dir, f"frame-{keyframe_idx:06d}.pose.txt")
 
                         cv2.imwrite(colour_filename, colour_image)
-                        ImageUtil.save_depth_image(depth_filename, depth_image)
+                        cv2.imwrite(convergence_filename, convergence_map)
+                        ImageUtil.save_depth_image(depth_filename, original_depth_image)
                         PoseUtil.save_pose(pose_filename, np.linalg.inv(pose))
 
                     # Increment the keyframe index.
