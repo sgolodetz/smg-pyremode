@@ -35,3 +35,8 @@ class RGBDImageSource(ABC):
         :return:    A tuple consisting of a colour image and a depth image from the image source (in that order).
         """
         pass
+
+    @abstractmethod
+    def terminate(self) -> None:
+        """Tell the image source to terminate."""
+        pass
