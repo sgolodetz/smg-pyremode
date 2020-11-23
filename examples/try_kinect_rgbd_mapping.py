@@ -24,7 +24,7 @@ def main():
             )
             with RGBDMappingSystem(
                 RGBDOpenNICamera(camera), tracker, depth_estimator,
-                output_dir="C:/spaint/build/bin/apps/spaintgui/sequences/remode"
+                output_dir="C:/spaint/build/bin/apps/spaintgui/sequences/remode-kinect"
             ) as system:
                 tsdf = system.run()
 

@@ -46,7 +46,10 @@ def main():
             settings_file=f"settings-{source_type}.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            with MonocularMappingSystem(image_source, tracker, depth_estimator) as system:
+            with MonocularMappingSystem(
+                image_source, tracker, depth_estimator,
+                output_dir="C:/spaint/build/bin/apps/spaintgui/sequences/remode-mono"
+            ) as system:
                 tsdf = system.run()
 
             # If ORB-SLAM's not ready yet, forcibly terminate the whole process (this isn't graceful, but
