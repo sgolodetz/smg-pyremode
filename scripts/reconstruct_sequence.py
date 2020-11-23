@@ -44,18 +44,11 @@ def main():
         depth_image: np.ndarray = ImageUtil.load_depth_image(depth_filename)
         pose: np.ndarray = np.linalg.inv(PoseUtil.load_pose(pose_filename))
 
-        # depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
-        # depth_image = np.where(depth_mask != 0, depth_image, 0.0).astype(np.float32)
         depth_image = DepthProcessor.denoise_depth(depth_image, convergence_map, intrinsics)
-        # depth_image = DepthProcessor.densify_depth_image(depth_image)[0]
+        # depth_image, _ = DepthProcessor.densify_depth_image(depth_image)
 
         # TODO
-        # depth_mask: np.ndarray = np.where(depth_image != 0, 255, 0).astype(np.uint8)
-        # pcd_points, pcd_colours = GeometryUtil.make_point_cloud(colour_image, depth_image, depth_mask, intrinsics)
-        # pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
-        # pcd.points = o3d.utility.Vector3dVector(pcd_points)
-        # pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
-        # VisualisationUtil.visualise_geometry(pcd)
+        # VisualisationUtil.visualise_rgbd_image(colour_image, depth_image, intrinsics)
 
         # TODO
         ReconstructionUtil.integrate_frame(
