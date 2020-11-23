@@ -47,6 +47,7 @@ def main():
         # depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
         # depth_image = np.where(depth_mask != 0, depth_image, 0.0).astype(np.float32)
         depth_image = DepthProcessor.denoise_depth(depth_image, convergence_map, intrinsics)
+        depth_image = DepthProcessor.densify_depth_image(depth_image)[0]
 
         # TODO
         # depth_mask: np.ndarray = np.where(depth_image != 0, 255, 0).astype(np.uint8)

@@ -183,7 +183,7 @@ class DepthAssembler:
             with self.__get_lock:
                 self.__keyframe_converged_percentage = depthmap.get_converged_percentage()
                 self.__keyframe_convergence_map = np.array(depthmap.get_convergence_map(), copy=False)
-                self.__keyframe_depth_image = np.array(depthmap.get_denoised_depthmap(), copy=False)
+                self.__keyframe_depth_image = np.array(depthmap.get_denoised_depthmap(iterations=400), copy=False)
 
                 # Note: The depths produced by REMODE are Euclidean, so we need to manually convert them to orthogonal.
                 GeometryUtil.make_depths_orthogonal(self.__keyframe_depth_image, self.__intrinsics)
