@@ -9,8 +9,8 @@ from smg.pyremode import CONVERGED
 from smg.utility import GeometryUtil
 
 
-class DepthDenoiser:
-    """Utility functions for denoising depth images."""
+class DepthProcessor:
+    """Utility functions for post-processing depth images."""
 
     # PUBLIC STATIC METHODS
 
@@ -67,6 +67,7 @@ class DepthDenoiser:
             # # output_image = np.where(output_mask != 0, output_image, 0.0).astype(np.float32)
             # return output_image  # DepthDenoiser.densify_depth_image(output_image)[0]
             # return DepthDenoiser.densify_depth_image(converged_depth_image)[0]
+            return converged_depth_image
 
         # Make the converged point cloud.
         height, width = converged_depth_image.shape

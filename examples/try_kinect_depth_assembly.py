@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from smg.open3d import VisualisationUtil
 from smg.openni import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, DepthAssembler, DepthDenoiser
+from smg.pyremode import CONVERGED, DepthAssembler, DepthProcessor
 from smg.utility import GeometryUtil
 
 
@@ -80,8 +80,8 @@ def main():
             # estimated_depth_image = np.where(depth_mask != 0, estimated_depth_image, 0.0).astype(np.float32)
             # estimated_depth_image = DepthDenoiser.denoise_depth(estimated_depth_image, intrinsics)
             # depth_mask = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
-            estimated_depth_image = DepthDenoiser.denoise_depth(estimated_depth_image, convergence_map, intrinsics)
-            estimated_depth_image, _ = DepthDenoiser.densify_depth_image(estimated_depth_image)
+            estimated_depth_image = DepthProcessor.denoise_depth(estimated_depth_image, convergence_map, intrinsics)
+            estimated_depth_image, _ = DepthProcessor.densify_depth_image(estimated_depth_image)
             depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
 
             plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)

@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from typing import Optional, Tuple
 
 from smg.open3d import VisualisationUtil
-from smg.pyremode import DepthDenoiser
+from smg.pyremode import DepthProcessor
 from smg.utility import GeometryUtil, ImageUtil
 
 
@@ -24,7 +24,7 @@ def main():
     input_depth_image: np.ndarray = ImageUtil.load_depth_image(args["input_depth_file"])
     # intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
     intrinsics: Tuple[float, float, float, float] = (946.60441222, 941.38386885, 460.29254907, 357.08431882)
-    output_depth_image: np.ndarray = DepthDenoiser.denoise_depth(input_depth_image, convergence_map, intrinsics)
+    output_depth_image: np.ndarray = DepthProcessor.denoise_depth(input_depth_image, convergence_map, intrinsics)
 
     _, ax = plt.subplots(1, 3)
     ax[0].imshow(input_depth_image, vmin=0.0, vmax=4.0)

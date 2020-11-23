@@ -3,7 +3,7 @@ import numpy as np
 
 from argparse import ArgumentParser
 
-from smg.pyremode import DepthDenoiser
+from smg.pyremode import DepthProcessor
 from smg.utility import ImageUtil
 
 
@@ -15,7 +15,7 @@ def main():
     args: dict = vars(parser.parse_args())
 
     input_depth_image: np.ndarray = ImageUtil.load_depth_image(args["input_file"])
-    output_depth_image, triangulation = DepthDenoiser.densify_depth_image(input_depth_image)
+    output_depth_image, triangulation = DepthProcessor.densify_depth_image(input_depth_image)
 
     _, ax = plt.subplots(1, 3)
     ax[0].imshow(input_depth_image, vmin=0.0, vmax=4.0)
