@@ -17,6 +17,10 @@ def main():
     # Parse any command-line arguments.
     parser = ArgumentParser()
     parser.add_argument(
+        "--output_dir", type=str,
+        help="an optional directory into which to save the keyframes"
+    )
+    parser.add_argument(
         "--source_type", "-t", type=str, required=True, choices=("ardrone2", "kinect", "tello"),
         help="the input type"
     )
@@ -48,8 +52,7 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             with MonocularMappingSystem(
-                image_source, tracker, depth_estimator,
-                output_dir="C:/spaint/build/bin/apps/spaintgui/sequences/remode-mono"
+                image_source, tracker, depth_estimator, output_dir=args.get("output_dir")
             ) as system:
                 tsdf = system.run()
 
