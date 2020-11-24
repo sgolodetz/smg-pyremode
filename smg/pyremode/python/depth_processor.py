@@ -27,45 +27,35 @@ class DepthProcessor:
             (ii) Removes pixels that either have a nearby pixel with a much larger depth,
                  or have a missing pixel in their close neighbourhood.
 
-        :param depth_image: The REMODE depth image (after filtering out unconverged pixels).
+        :param depth_image: A REMODE depth image (after filtering out unconverged pixels).
         :return:            The denoised depth image.
         """
         # Median filter the depth image to help reduce impulsive noise.
         depth_image = cv2.medianBlur(depth_image, 7)
 
-        # Make a short version of the depth image so that it can be dilated.
-        depth_scale_factor: float = 1000.0
-        depth_image_s: np.ndarray = (depth_image * depth_scale_factor).astype(np.uint16)
-
-        # Construct dilated and eroded versions of the short depth image.
-        dilation_kernel: np.ndarray = np.ones((9, 9), np.uint8)
-        erosion_kernel: np.ndarray = np.ones((3, 3), np.uint8)
-        dilated_depth_image_s: np.ndarray = cv2.dilate(depth_image_s, dilation_kernel)
-        eroded_depth_image_s: np.ndarray = cv2.erode(depth_image_s, erosion_kernel)
-
-        # Convert the short dilated and eroded depth images back to floating point.
-        dilated_depth_image: np.ndarray = dilated_depth_image_s.astype(np.float32) / depth_scale_factor
-        eroded_depth_image: np.ndarray = eroded_depth_image_s.astype(np.float32) / depth_scale_factor
+        # Make dilated and eroded versions of the depth image. Note that dilation on a non-binary image performs
+        # a windowed maximum, and erosion on a non-binary image performs a windowed minimum.
+        dilated_depth_image: np.ndarray = DepthProcessor.__dilate_depth_image(depth_image, 9)
+        eroded_depth_image: np.ndarray = DepthProcessor.__erode_depth_image(depth_image, 3)
 
         # Filter the depth image to remove pixels that either (i) have a nearby pixel with a much larger depth,
         # or (ii) have a missing pixel in their close neighbourhood. The idea is that these are much more likely
         # to be true of noisy points floating in space than points that form part of a surface. We'll lose some
         # good points as well, but so be it.
         return np.where(
-            (np.fabs(dilated_depth_image - depth_image) <= 0.05) & (eroded_depth_image != 0.0),
-            depth_image, 0.0
+            (np.fabs(dilated_depth_image - depth_image) <= 0.05) & (eroded_depth_image != 0.0), depth_image, 0.0
         ).astype(np.float32)
 
     @staticmethod
     def denoise_depth_statistical(depth_image: np.ndarray, intrinsics: Tuple[float, float, float, float]) \
             -> np.ndarray:
         """
-        Denoise a REMODE depth image using statistical outlier removal from Open3D.
+        Denoise a REMODE depth image using a statistical outlier removal method from Open3D.
 
         .. note::
             This is intended to be called on a depth image from which unconverged pixels have already been removed.
 
-        :param depth_image: The depth image to denoise.
+        :param depth_image: A REMODE depth image (after filtering out unconverged pixels).
         :param intrinsics:  The camera intrinsics.
         :return:            The denoised depth image.
         """
@@ -109,31 +99,37 @@ class DepthProcessor:
     @staticmethod
     def densify_depth_delaunay(input_depth_image: np.ndarray) -> Tuple[np.ndarray, Optional[mtri.Triangulation]]:
         """
-        Densify the specified depth image.
+        Try to densify a depth image by constructing a Delaunay triangulation of the pixels with known depths,
+        and then linearly interpolating from the depth values at the triangles' vertices.
 
         .. note::
-            The approach used is to construct a Delaunay triangulation of the pixels with known depths and then
-            linearly interpolate the depth values at the triangles' vertices.
+            No densification will be performed if the triangulation cannot be constructed,
+            e.g. if there are fewer than three non-zero points in the input depth image.
 
-        :param input_depth_image:   TODO
-        :return:                    TODO
+        :param input_depth_image:   The input depth image.
+        :return:                    A tuple consisting of the densified depth image and the triangulation that was used
+                                    to make it, if possible, else a tuple consisting of the input depth image and None.
         """
+        # Try to triangulate the input depth image. If this isn't possible, early out.
         iy, ix = np.nonzero(input_depth_image)
         iz = input_depth_image[(iy, ix)]
         if len(iz) < 3:
             return input_depth_image, None
+
         triangulation: mtri.Triangulation = mtri.Triangulation(ix, iy)
 
-        # See: https://stackoverflow.com/questions/52457964/how-to-deal-with-the-undesired-triangles-that-form-between-the-edges-of-my-geo
-        max_radius = 10
+        # Filter out any unsuitable triangles (see https://stackoverflow.com/questions/52457964/
+        # how-to-deal-with-the-undesired-triangles-that-form-between-the-edges-of-my-geo).
         triangles = triangulation.triangles
-        xtri = ix[triangles] - np.roll(ix[triangles], 1, axis=1)
-        ytri = iy[triangles] - np.roll(iy[triangles], 1, axis=1)
-        maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
+        # xtri = ix[triangles] - np.roll(ix[triangles], 1, axis=1)
+        # ytri = iy[triangles] - np.roll(iy[triangles], 1, axis=1)
+        # maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
+        # max_radius = 10
+        # triangulation.set_mask(maxi > max_radius)
         ztri = np.fabs(iz[triangles] - np.roll(iz[triangles], 1, axis=1))
-        # triangulation.set_mask((maxi > max_radius) | (np.max(ztri, axis=1) > 0.02))
         triangulation.set_mask(np.max(ztri, axis=1) > 0.05)
 
+        # Use linear interpolation to fill in the depth values within each triangle.
         oy, ox = np.nonzero(np.ones_like(input_depth_image))
         interpolator: mtri.LinearTriInterpolator = mtri.LinearTriInterpolator(triangulation, iz)
         result: np.ma.core.MaskedArray = interpolator(ox, oy)
@@ -142,28 +138,23 @@ class DepthProcessor:
         return output_depth_image, triangulation
 
     @staticmethod
-    def densify_depth_simple(inlier_depth_image: np.ndarray, converged_depth_image: np.ndarray) -> np.ndarray:
+    def densify_depth_simple(trusted_depth_image: np.ndarray, untrusted_depth_image: np.ndarray) -> np.ndarray:
         """
-        TODO
+        Densify a trusted depth image by looking up suitable additional depth values from a less-trusted depth image.
 
-        :param inlier_depth_image:      TODO
-        :param converged_depth_image:   TODO
-        :return:                        TODO
+        .. note::
+            The idea is to trust additional points from the untrusted image that are close to points we already trust.
+
+        :param trusted_depth_image:     The trusted depth image.
+        :param untrusted_depth_image:   The less-trusted depth image.
+        :return:                        A densified version of the trusted depth image.
         """
-        # Make a short version of the inlier depth image so that it can be dilated.
-        depth_scale_factor: float = 1000.0
-        inlier_depth_image_s: np.ndarray = (inlier_depth_image * depth_scale_factor).astype(np.uint16)
+        # Make a dilated version of the trusted depth image.
+        dilated_trusted_depth_image: np.ndarray = DepthProcessor.__dilate_depth_image(trusted_depth_image, 9)
 
-        # Dilate the short inlier depth image.
-        dilation_kernel = np.ones((9, 9), np.uint8)
-        inlier_depth_image_s = cv2.dilate(inlier_depth_image_s, dilation_kernel)
-
-        # Convert the dilated short inlier depth image back to floating point.
-        dilated_inlier_depth_image: np.ndarray = inlier_depth_image_s.astype(np.float32) / depth_scale_factor
-
-        # Filter the converged depth image for only those pixels that have a nearby inlier with a very similar depth.
+        # Filter the untrusted depth image for those pixels that have a nearby trusted pixel with a very similar depth.
         return np.where(
-            np.fabs(dilated_inlier_depth_image - converged_depth_image) <= 0.02, converged_depth_image, 0.0
+            np.fabs(dilated_trusted_depth_image - untrusted_depth_image) <= 0.02, untrusted_depth_image, 0.0
         ).astype(np.float32)
 
     @staticmethod
@@ -185,8 +176,8 @@ class DepthProcessor:
         depth_image, _ = DepthProcessor.densify_depth_delaunay(depth_image)
 
         # Approach #2 (Slow, reasonable)
-        # inlier_depth_image: np.ndarray = DepthProcessor.denoise_depth_statistical(depth_image, intrinsics)
-        # depth_image = DepthProcessor.densify_depth_simple(inlier_depth_image, depth_image)
+        # trusted_depth_image: np.ndarray = DepthProcessor.denoise_depth_statistical(depth_image, intrinsics)
+        # depth_image = DepthProcessor.densify_depth_simple(trusted_depth_image, depth_image)
 
         # Approach #3 (Fast but less good)
         # depth_image = DepthProcessor.denoise_depth_fast(depth_image)
@@ -196,10 +187,52 @@ class DepthProcessor:
     @staticmethod
     def remove_unconverged_pixels(raw_depth_image, convergence_map: np.ndarray) -> np.ndarray:
         """
-        Filter a raw REMODE-produced depth image to keep only those pixels whose depth has converged.
+        Filter a raw REMODE depth image to keep only those pixels whose depth has converged.
 
         :param raw_depth_image:     The raw depth image produced by REMODE (after REMODE's own denoising).
         :param convergence_map:     The convergence map produced by REMODE.
         :return:                    The filtered depth image.
         """
         return np.where(convergence_map == CONVERGED, raw_depth_image, 0.0).astype(np.float32)
+
+    # PRIVATE STATIC METHODS
+
+    @staticmethod
+    def __dilate_depth_image(depth_image: np.ndarray, kernel_size: int) -> np.ndarray:
+        """
+        Dilate a floating-point depth image.
+
+        :param depth_image:     The depth image.
+        :param kernel_size:     The size of kernel to use.
+        :return:                The dilated depth image.
+        """
+        # Make a short version of the depth image so that it can be dilated.
+        depth_scale_factor: float = 1000.0
+        depth_image_s: np.ndarray = (depth_image * depth_scale_factor).astype(np.uint16)
+
+        # Dilate the short depth image.
+        kernel: np.ndarray = np.ones((kernel_size, kernel_size), np.uint8)
+        dilated_depth_image_s: np.ndarray = cv2.dilate(depth_image_s, kernel)
+
+        # Convert the dilated short depth image back to floating point.
+        return dilated_depth_image_s.astype(np.float32) / depth_scale_factor
+
+    @staticmethod
+    def __erode_depth_image(depth_image: np.ndarray, kernel_size: int) -> np.ndarray:
+        """
+        Erode a floating-point depth image.
+
+        :param depth_image:     The depth image.
+        :param kernel_size:     The size of kernel to use.
+        :return:                The eroded depth image.
+        """
+        # Make a short version of the depth image so that it can be eroded.
+        depth_scale_factor: float = 1000.0
+        depth_image_s: np.ndarray = (depth_image * depth_scale_factor).astype(np.uint16)
+
+        # Erode the short depth image.
+        kernel: np.ndarray = np.ones((kernel_size, kernel_size), np.uint8)
+        eroded_depth_image_s: np.ndarray = cv2.erode(depth_image_s, kernel)
+
+        # Convert the eroded short depth image back to floating point.
+        return eroded_depth_image_s.astype(np.float32) / depth_scale_factor
