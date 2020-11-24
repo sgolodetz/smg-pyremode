@@ -16,64 +16,62 @@ class DepthProcessor:
 
     @staticmethod
     def denoise_depth(raw_depth_image: np.ndarray, convergence_map: np.ndarray,
-                      intrinsics: Tuple[float, float, float, float]) -> np.ndarray:
-        # TODO: Update all of this.
+                      intrinsics: Tuple[float, float, float, float], *,
+                      extended_denoising: bool = False) -> np.ndarray:
         """
-        Denoise the specified depth image.
+        Denoise a REMODE depth image.
 
         .. note::
-            The technique currently used is to:
+            The extended denoising sometimes helps, but always takes longer. It may or may not be worth using.
 
-              (i) Make a point cloud.
-             (ii) Downsample the point cloud and remove statistical outliers using Open3D.
-            (iii) Use the inliers found by Open3D to make a new depth image.
-             (iv) Dilate the new depth image to restore some of its original density.
-
-            Various improvements may be made in the future, e.g. restoring the estimated depths of the pixels
-            surrounding the known inliers if they're close enough to the inlier depth to be trusted.
-
-        :param raw_depth_image: The raw depth image.
-        :param convergence_map: TODO
-        :param intrinsics:      The camera intrinsics.
-        :return:                The denoised depth image.
+        :param raw_depth_image:     The raw depth image produced by REMODE (after doing its own denoising).
+        :param convergence_map:     The convergence map produced by REMODE.
+        :param intrinsics:          The camera intrinsics.
+        :param extended_denoising:  Whether to perform extended denoising.
+        :return:                    The denoised depth image.
         """
-        converged_depth_image: np.ndarray = np.where(convergence_map == CONVERGED, raw_depth_image, 0.0).astype(np.float32)
+        # Filter the raw depth image to keep only those pixels whose REMODE-produced depth has converged.
+        converged_depth_image: np.ndarray = np.where(
+            convergence_map == CONVERGED, raw_depth_image, 0.0
+        ).astype(np.float32)
 
-        if True:
-            converged_depth_image = cv2.medianBlur(converged_depth_image, 7)
+        # Median filter the converged depth image to help reduce impulsive noise.
+        converged_depth_image = cv2.medianBlur(converged_depth_image, 7)
 
-            # Convert the converged depth image to a short depth image so that it can be dilated.
-            depth_scale_factor: float = 1000.0
-            short_depth_image: np.ndarray = (converged_depth_image * depth_scale_factor).astype(np.uint16)
+        # Make a short version of the converged depth image so that it can be dilated.
+        depth_scale_factor: float = 1000.0
+        converged_depth_image_s: np.ndarray = (converged_depth_image * depth_scale_factor).astype(np.uint16)
 
-            # Dilate the short depth image.
-            dilation_kernel: np.ndarray = np.ones((9, 9), np.uint8)
-            erosion_kernel: np.ndarray = np.ones((3, 3), np.uint8)
-            short_dilated_depth_image: np.ndarray = cv2.dilate(short_depth_image, dilation_kernel)
-            short_eroded_depth_image: np.ndarray = cv2.erode(short_depth_image, erosion_kernel)
+        # Construct dilated and eroded versions of the short converged depth image.
+        dilation_kernel: np.ndarray = np.ones((9, 9), np.uint8)
+        erosion_kernel: np.ndarray = np.ones((3, 3), np.uint8)
+        dilated_depth_image_s: np.ndarray = cv2.dilate(converged_depth_image_s, dilation_kernel)
+        eroded_depth_image_s: np.ndarray = cv2.erode(converged_depth_image_s, erosion_kernel)
 
-            # Convert the dilated short depth image back to a floating-point depth image.
-            dilated_depth_image: np.ndarray = short_dilated_depth_image.astype(np.float32) / depth_scale_factor
-            eroded_depth_image: np.ndarray = short_eroded_depth_image.astype(np.float32) / depth_scale_factor
+        # Convert the short dilated and eroded depth images back to floating point.
+        dilated_depth_image: np.ndarray = dilated_depth_image_s.astype(np.float32) / depth_scale_factor
+        eroded_depth_image: np.ndarray = eroded_depth_image_s.astype(np.float32) / depth_scale_factor
 
-            converged_depth_image = np.where(
-                (np.fabs(dilated_depth_image - converged_depth_image) <= 0.05) & (eroded_depth_image != 0.0),
-                converged_depth_image, 0.0
-            ).astype(np.float32)
+        # Filter the converged depth image to remove pixels that either (i) have a nearby pixel with a much
+        # larger depth, or (ii) have a missing pixel in their close neighbourhood. The idea is that these
+        # are much more likely to be true of noisy points floating in space than points that form part of
+        # a surface. We'll lose some good points as well, but so be it.
+        converged_depth_image = np.where(
+            (np.fabs(dilated_depth_image - converged_depth_image) <= 0.05) & (eroded_depth_image != 0.0),
+            converged_depth_image, 0.0
+        ).astype(np.float32)
 
-            # output_mask = np.where(output_image != 0, 255, 0).astype(np.uint8)
-            # new_kernel = np.ones((9, 9), np.uint8)
-            # output_mask = cv2.morphologyEx(output_mask, cv2.MORPH_OPEN, new_kernel)
-            # # output_image = np.where(output_mask != 0, output_image, 0.0).astype(np.float32)
-            # return output_image  # DepthDenoiser.densify_depth_image(output_image)[0]
-            # return DepthDenoiser.densify_depth_image(converged_depth_image)[0]
+        # If we're not going to perform extended denoising, return the converged depth image at this point.
+        if not extended_denoising:
             return converged_depth_image
 
         # Make the converged point cloud.
         height, width = converged_depth_image.shape
         colour_image: np.ndarray = np.zeros((height, width, 3), dtype=np.uint8)
         depth_mask: np.ndarray = np.where(converged_depth_image != 0, 255, 0).astype(np.uint8)
-        pcd_points, pcd_colours = GeometryUtil.make_point_cloud(colour_image, converged_depth_image, depth_mask, intrinsics)
+        pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
+            colour_image, converged_depth_image, depth_mask, intrinsics
+        )
 
         # Shuffle the points to avoid artifacts when the point cloud is uniformly downsampled.
         rng_state = np.random.get_state()
@@ -89,35 +87,38 @@ class DepthProcessor:
         pcd.points = o3d.utility.Vector3dVector(pcd_points)
         pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
 
-        # Downsample the converged point cloud and denoise it.
+        # Downsample the converged point cloud and denoise it using a built-in (and quite slow) approach from Open3D.
         factor: int = 10
         pcd = pcd.uniform_down_sample(every_k_points=factor)
-        pcd, ind = pcd.remove_statistical_outlier(20, 2.0)
+        pcd, inliers = pcd.remove_statistical_outlier(20, 2.0)
 
-        # Remap the indices of the retained points to correspond to the points in the converged point cloud.
-        ind = list(map(lambda x: original_indices[x * factor], ind))
+        # Remap the indices of the inliers to correspond to the points in the converged point cloud.
+        inliers = list(map(lambda x: original_indices[x * factor], inliers))
 
-        # Convert the retained point indices into a mask.
-        ind_mask: np.ndarray = np.zeros(converged_depth_image.shape, dtype=np.uint8)
-        ind_mask = ind_mask.flatten()
-        ind_mask[ind] = 255
-        ind_mask = ind_mask.reshape(converged_depth_image.shape, order='C')
+        # Convert the inlier indices into a mask.
+        inlier_mask: np.ndarray = np.zeros(converged_depth_image.shape, dtype=np.uint8)
+        inlier_mask = inlier_mask.flatten()
+        inlier_mask[inliers] = 255
+        inlier_mask = inlier_mask.reshape(converged_depth_image.shape, order='C')
 
-        # Mask out the outliers in the depth image.
-        trusted_depth_image: np.ndarray = np.where(ind_mask != 0, converged_depth_image, 0.0).astype(np.float32)
+        # Make a new depth image that contains only the inliers from the downsampled point cloud (i.e. quite sparse).
+        inlier_depth_image: np.ndarray = np.where(inlier_mask != 0, converged_depth_image, 0.0).astype(np.float32)
 
-        # Convert the floating-point depth image to a short depth image so that it can be dilated.
+        # Make a short version of the inlier depth image so that it can be dilated.
         depth_scale_factor: float = 1000.0
-        short_depth_image: np.ndarray = (trusted_depth_image * depth_scale_factor).astype(np.uint16)
+        inlier_depth_image_s: np.ndarray = (inlier_depth_image * depth_scale_factor).astype(np.uint16)
 
-        # Dilate the short depth image.
-        dilation_kernel: np.ndarray = np.ones((9, 9), np.uint8)
-        short_depth_image = cv2.dilate(short_depth_image, dilation_kernel)
+        # Dilate the short inlier depth image.
+        dilation_kernel = np.ones((9, 9), np.uint8)
+        inlier_depth_image_s = cv2.dilate(inlier_depth_image_s, dilation_kernel)
 
-        # Convert the dilated short depth image back to a floating-point depth image.
-        dilated_depth_image: np.ndarray = short_depth_image.astype(np.float32) / depth_scale_factor
+        # Convert the dilated short inlier depth image back to floating point.
+        dilated_inlier_depth_image: np.ndarray = inlier_depth_image_s.astype(np.float32) / depth_scale_factor
 
-        return np.where(np.fabs(dilated_depth_image - converged_depth_image) < 0.02, converged_depth_image, 0.0).astype(np.float32)
+        # TODO: Comment here.
+        return np.where(
+            np.fabs(dilated_inlier_depth_image - converged_depth_image) < 0.02, converged_depth_image, 0.0
+        ).astype(np.float32)
 
     @staticmethod
     def densify_depth_image(input_depth_image: np.ndarray) -> Tuple[np.ndarray, Optional[mtri.Triangulation]]:
