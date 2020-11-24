@@ -81,7 +81,7 @@ def main():
                 result = depth_assembler.get(blocking=False)
                 if result is not None:
                     _, estimated_depth_image, _, converged_percentage, convergence_map = result
-                    print(f"Converged %: {converged_percentage}")
+                    print(f"Converged: {converged_percentage}%")
 
                 # Visualise the progress towards a suitable depth image. Move on once the user presses a key.
                 ax[0, 0].clear()
