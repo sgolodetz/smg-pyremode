@@ -14,7 +14,8 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
     # CONSTRUCTOR
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
-                 min_converged_percentage: float = 40.0, min_depth: float = 0.1, max_depth: float = 4.0,
+                 denoising_iterations: int = 200, min_converged_percentage: float = 40.0,
+                 min_depth: float = 0.1, max_depth: float = 4.0,
                  min_images_per_keyframe: int = 30, max_images_per_keyframe: int = 150):
         """
         Construct a temporal keyframe depth estimator.
@@ -23,6 +24,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
             When at least the minimum but fewer than the maximum number of images have been supplied, the decision
             about whether to yield a keyframe early is based on how well the REMODE depthmap has converged.
 
+        :param denoising_iterations:        The number of denoising iterations that should be performed on depthmaps.
         :param image_size:                  The image size, as a (width, height) tuple.
         :param intrinsics:                  The camera intrinsics.
         :param min_converged_percentage:    The minimum percentage of the REMODE depthmap that needs to have
@@ -33,6 +35,7 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
         :param max_depth:                   An estimate of the upper bound of the depths present in the scene.
         """
         self.__back_assembler: Optional[DepthAssembler] = None
+        self.__denoising_iterations: int = denoising_iterations
         self.__front_assembler: Optional[DepthAssembler] = None
         self.__image_size: Tuple[int, int] = image_size
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
@@ -89,7 +92,8 @@ class TemporalKeyframeDepthEstimator(DepthEstimator):
 
                     # Make a new back assembler and reset the image count.
                     self.__back_assembler = DepthAssembler(
-                        self.__image_size, self.__intrinsics, min_depth=self.__min_depth, max_depth=self.__max_depth
+                        self.__image_size, self.__intrinsics, denoising_iterations=self.__denoising_iterations,
+                        min_depth=self.__min_depth, max_depth=self.__max_depth
                     )
                     self.__keyframe_image_count = 0
 

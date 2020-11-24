@@ -2,6 +2,7 @@ import cv2
 import open3d as o3d
 import os
 
+from argparse import ArgumentParser
 from typing import Optional
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
@@ -11,6 +12,14 @@ from smg.pyremode import DepthEstimator, RGBDMappingSystem, RGBDOpenNICamera, Te
 
 
 def main():
+    # Parse any command-line arguments.
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--output_dir", type=str,
+        help="an optional directory into which to save the keyframes"
+    )
+    args: dict = vars(parser.parse_args())
+
     # noinspection PyUnusedLocal
     tsdf: Optional[o3d.pipelines.integration.ScalableTSDFVolume] = None
 
@@ -20,11 +29,11 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-                camera.get_colour_dims(), camera.get_colour_intrinsics(), max_images_per_keyframe=30
+                camera.get_colour_dims(), camera.get_colour_intrinsics(),
+                denoising_iterations=400, max_images_per_keyframe=30
             )
             with RGBDMappingSystem(
-                RGBDOpenNICamera(camera), tracker, depth_estimator,
-                output_dir="C:/spaint/build/bin/apps/spaintgui/sequences/remode"
+                RGBDOpenNICamera(camera), tracker, depth_estimator, output_dir=args.get("output_dir")
             ) as system:
                 tsdf = system.run()
 

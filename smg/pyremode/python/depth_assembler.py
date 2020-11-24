@@ -17,19 +17,21 @@ class DepthAssembler:
     # CONSTRUCTOR
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
-                 min_depth: float = 0.1, max_depth: float = 4.0):
+                 denoising_iterations: int = 200, min_depth: float = 0.1, max_depth: float = 4.0):
         """
         Construct a depth assembler.
 
-        :param image_size:  The image size, as a (width, height) tuple.
-        :param intrinsics:  The camera intrinsics.
-        :param min_depth:   An estimate of the lower bound of the depths present in the scene.
-        :param max_depth:   An estimate of the upper bound of the depths present in the scene.
+        :param image_size:              The image size, as a (width, height) tuple.
+        :param intrinsics:              The camera intrinsics.
+        :param denoising_iterations:    The number of denoising iterations that should be performed on depthmaps.
+        :param min_depth:               An estimate of the lower bound of the depths present in the scene.
+        :param max_depth:               An estimate of the upper bound of the depths present in the scene.
         """
+        self.__denoising_iterations: int = denoising_iterations
         self.__image_size: Tuple[int, int] = image_size
         self.__input_colour_image: Optional[np.ndarray] = None
-        self.__input_is_keyframe: bool = True
         self.__input_is_pending: bool = False
+        self.__input_is_reference: bool = True
         self.__input_pose: Optional[np.ndarray] = None
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
         self.__keyframe_colour_image: Optional[np.ndarray] = None
@@ -161,14 +163,14 @@ class DepthAssembler:
             qx, qy, qz, qw = r.as_quat()
             se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
 
-            # If this is the keyframe:
-            if self.__input_is_keyframe:
+            # If this is the reference input:
+            if self.__input_is_reference:
                 # Store the input colour image and pose for later.
                 self.__keyframe_colour_image = input_colour_image
                 self.__keyframe_pose = input_pose
 
-                # Ensure that no future inputs are treated as the keyframe.
-                self.__input_is_keyframe = False
+                # Ensure that no future inputs are treated as the reference.
+                self.__input_is_reference = False
 
                 # Make the initial REMODE depthmap, setting the input colour image as its reference image.
                 width, height = self.__image_size
@@ -183,7 +185,9 @@ class DepthAssembler:
             with self.__get_lock:
                 self.__keyframe_converged_percentage = depthmap.get_converged_percentage()
                 self.__keyframe_convergence_map = np.array(depthmap.get_convergence_map(), copy=False)
-                self.__keyframe_depth_image = np.array(depthmap.get_denoised_depthmap(), copy=False)
+                self.__keyframe_depth_image = np.array(
+                    depthmap.get_denoised_depthmap(iterations=self.__denoising_iterations), copy=False
+                )
 
                 # Note: The depths produced by REMODE are Euclidean, so we need to manually convert them to orthogonal.
                 GeometryUtil.make_depths_orthogonal(self.__keyframe_depth_image, self.__intrinsics)

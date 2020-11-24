@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from typing import Dict, Optional
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
-from smg.openni.openni_camera import OpenNICamera
+from smg.openni import OpenNICamera
 from smg.pyorbslam2 import MonocularTracker
 from smg.pyremode import DepthEstimator, MonocularMappingSystem, TemporalKeyframeDepthEstimator
 from smg.pyremode import RGBDOpenNICamera, RGBDroneCamera, RGBFromRGBDImageSource, RGBImageSource
@@ -17,8 +17,12 @@ def main():
     # Parse any command-line arguments.
     parser = ArgumentParser()
     parser.add_argument(
+        "--output_dir", type=str,
+        help="an optional directory into which to save the keyframes"
+    )
+    parser.add_argument(
         "--source_type", "-t", type=str, required=True, choices=("ardrone2", "kinect", "tello"),
-        help="the input type"
+        help="the source type"
     )
     args: dict = vars(parser.parse_args())
 
@@ -26,7 +30,8 @@ def main():
     tsdf: Optional[o3d.pipelines.integration.ScalableTSDFVolume] = None
     image_source: Optional[RGBImageSource] = None
     try:
-        # Construct the RGB image source and depth estimator.
+        # Construct the RGB image source.
+        # FIXME: This is duplicate code - factor it out.
         source_type: str = args["source_type"]
         if source_type == "kinect":
             image_source = RGBFromRGBDImageSource(RGBDOpenNICamera(OpenNICamera(mirror_images=True)))
@@ -37,8 +42,10 @@ def main():
             }
             image_source = RGBDroneCamera(DroneFactory.make_drone(source_type, **kwargs[source_type]))
 
+        # Construct the depth estimator.
         depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-            image_source.get_image_dims(), image_source.get_intrinsics()
+            image_source.get_image_dims(), image_source.get_intrinsics(),
+            denoising_iterations=400
         )
 
         # Run the mapping system.
@@ -46,7 +53,9 @@ def main():
             settings_file=f"settings-{source_type}.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            with MonocularMappingSystem(image_source, tracker, depth_estimator) as system:
+            with MonocularMappingSystem(
+                image_source, tracker, depth_estimator, output_dir=args.get("output_dir")
+            ) as system:
                 tsdf = system.run()
 
             # If ORB-SLAM's not ready yet, forcibly terminate the whole process (this isn't graceful, but
