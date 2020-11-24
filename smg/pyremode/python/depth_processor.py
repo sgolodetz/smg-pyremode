@@ -161,12 +161,12 @@ class DepthProcessor:
     def postprocess_depth(raw_depth_image: np.ndarray, convergence_map: np.ndarray,
                           intrinsics: Tuple[float, float, float, float]) -> np.ndarray:
         """
-        TODO
+        Post-process a REMODE depth image to reduce noise.
 
-        :param raw_depth_image:     TODO
-        :param convergence_map:     TODO
-        :param intrinsics:          TODO
-        :return:                    TODO
+        :param raw_depth_image:     A raw depth image produced by REMODE (after REMODE's own denoising).
+        :param convergence_map:     The convergence map produced by REMODE.
+        :param intrinsics:          The camera intrinsics.
+        :return:                    The post-processed depth image.
         """
         depth_image: np.ndarray = DepthProcessor.remove_unconverged_pixels(raw_depth_image, convergence_map)
 
@@ -189,7 +189,7 @@ class DepthProcessor:
         """
         Filter a raw REMODE depth image to keep only those pixels whose depth has converged.
 
-        :param raw_depth_image:     The raw depth image produced by REMODE (after REMODE's own denoising).
+        :param raw_depth_image:     A raw depth image produced by REMODE (after REMODE's own denoising).
         :param convergence_map:     The convergence map produced by REMODE.
         :return:                    The filtered depth image.
         """
