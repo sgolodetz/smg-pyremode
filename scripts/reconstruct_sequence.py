@@ -49,13 +49,21 @@ def main():
 
     # Until we run out of keyframes:
     while True:
-        # Try to load the next keyframe from disk. If there isn't one, early out.
+        # Try to load the next keyframe from disk.
         colour_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.color.png")
         convergence_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.convergence.png")
         depth_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.depth.png")
         pose_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.pose.txt")
+
+        # If the colour image doesn't exist, early out.
         if not os.path.exists(colour_filename):
             break
+
+        # If the colour image exists but the depth image doesn't, skip the keyframe (it's likely that
+        # the user renamed the depth image to prevent this keyframe being used).
+        if not os.path.exists(depth_filename):
+            frame_idx += 1
+            continue
 
         print(f"Processing frame {frame_idx}...")
 
