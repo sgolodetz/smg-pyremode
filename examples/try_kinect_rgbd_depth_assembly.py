@@ -83,9 +83,8 @@ def main():
     # Close any remaining OpenCV windows.
     cv2.destroyAllWindows()
 
-    # Denoise and densify the depth image, and visualise the result. Move on once the user presses a key.
-    estimated_depth_image = DepthProcessor.denoise_depth(estimated_depth_image, convergence_map, intrinsics)
-    estimated_depth_image, _ = DepthProcessor.densify_depth_image(estimated_depth_image)
+    # Post-process the depth image, and visualise the result. Move on once the user presses a key.
+    estimated_depth_image = DepthProcessor.postprocess_depth(estimated_depth_image, convergence_map, intrinsics)
     ax[0, 1].imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
     plt.draw()
     plt.waitforbuttonpress()

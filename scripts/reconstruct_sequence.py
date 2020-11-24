@@ -6,21 +6,27 @@ import os
 from typing import Tuple
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
-from smg.pyremode import CONVERGED, DepthProcessor
-from smg.utility import GeometryUtil, ImageUtil, PoseUtil
+from smg.pyremode import DepthProcessor
+from smg.utility import ImageUtil, PoseUtil
 
 
 def main():
-    # sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-kinect"
-    # intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
-    # o3d_intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(
-    #     640, 480, 532.5694641250893, 531.5410880910171, 320.0, 240.0
-    # )
-    sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-mono"
-    intrinsics: Tuple[float, float, float, float] = (946.60441222, 941.38386885, 460.29254907, 357.08431882)
-    o3d_intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(
-        960, 720, 946.60441222, 941.38386885, 460.29254907, 357.08431882
-    )
+    source_type: str = "kinect"
+
+    if source_type == "kinect":
+        sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-kinect"
+        intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
+        o3d_intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(
+            640, 480, 532.5694641250893, 531.5410880910171, 320.0, 240.0
+        )
+    elif source_type == "tello":
+        sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-mono"
+        intrinsics: Tuple[float, float, float, float] = (946.60441222, 941.38386885, 460.29254907, 357.08431882)
+        o3d_intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(
+            960, 720, 946.60441222, 941.38386885, 460.29254907, 357.08431882
+        )
+    else:
+        raise RuntimeError(f"Unknown source type: {source_type}")
 
     tsdf: o3d.pipelines.integration.ScalableTSDFVolume = o3d.pipelines.integration.ScalableTSDFVolume(
         voxel_length=0.005,
@@ -44,8 +50,7 @@ def main():
         depth_image: np.ndarray = ImageUtil.load_depth_image(depth_filename)
         pose: np.ndarray = np.linalg.inv(PoseUtil.load_pose(pose_filename))
 
-        depth_image = DepthProcessor.denoise_depth(depth_image, convergence_map, intrinsics)
-        # depth_image, _ = DepthProcessor.densify_depth_image(depth_image)
+        depth_image = DepthProcessor.postprocess_depth(depth_image, convergence_map, intrinsics)
 
         # TODO
         # VisualisationUtil.visualise_rgbd_image(colour_image, depth_image, intrinsics)
