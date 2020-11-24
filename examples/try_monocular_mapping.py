@@ -38,7 +38,8 @@ def main():
             image_source = RGBDroneCamera(DroneFactory.make_drone(source_type, **kwargs[source_type]))
 
         depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-            image_source.get_image_dims(), image_source.get_intrinsics()
+            image_source.get_image_dims(), image_source.get_intrinsics(),
+            denoising_iterations=400
         )
 
         # Run the mapping system.

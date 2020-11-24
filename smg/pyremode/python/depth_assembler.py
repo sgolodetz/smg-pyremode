@@ -17,15 +17,17 @@ class DepthAssembler:
     # CONSTRUCTOR
 
     def __init__(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float], *,
-                 min_depth: float = 0.1, max_depth: float = 4.0):
+                 denoising_iterations: int = 200, min_depth: float = 0.1, max_depth: float = 4.0):
         """
         Construct a depth assembler.
 
-        :param image_size:  The image size, as a (width, height) tuple.
-        :param intrinsics:  The camera intrinsics.
-        :param min_depth:   An estimate of the lower bound of the depths present in the scene.
-        :param max_depth:   An estimate of the upper bound of the depths present in the scene.
+        :param image_size:              The image size, as a (width, height) tuple.
+        :param intrinsics:              The camera intrinsics.
+        :param denoising_iterations:    The number of denoising iterations that should be performed on depthmaps.
+        :param min_depth:               An estimate of the lower bound of the depths present in the scene.
+        :param max_depth:               An estimate of the upper bound of the depths present in the scene.
         """
+        self.__denoising_iterations: int = denoising_iterations
         self.__image_size: Tuple[int, int] = image_size
         self.__input_colour_image: Optional[np.ndarray] = None
         self.__input_is_pending: bool = False
@@ -183,7 +185,9 @@ class DepthAssembler:
             with self.__get_lock:
                 self.__keyframe_converged_percentage = depthmap.get_converged_percentage()
                 self.__keyframe_convergence_map = np.array(depthmap.get_convergence_map(), copy=False)
-                self.__keyframe_depth_image = np.array(depthmap.get_denoised_depthmap(iterations=400), copy=False)
+                self.__keyframe_depth_image = np.array(
+                    depthmap.get_denoised_depthmap(iterations=self.__denoising_iterations), copy=False
+                )
 
                 # Note: The depths produced by REMODE are Euclidean, so we need to manually convert them to orthogonal.
                 GeometryUtil.make_depths_orthogonal(self.__keyframe_depth_image, self.__intrinsics)

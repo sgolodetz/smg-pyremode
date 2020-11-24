@@ -20,7 +20,8 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-                camera.get_colour_dims(), camera.get_colour_intrinsics(), max_images_per_keyframe=30
+                camera.get_colour_dims(), camera.get_colour_intrinsics(),
+                denoising_iterations=400, max_images_per_keyframe=30
             )
             with RGBDMappingSystem(
                 RGBDOpenNICamera(camera), tracker, depth_estimator,
