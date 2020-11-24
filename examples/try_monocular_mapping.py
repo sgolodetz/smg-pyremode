@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from typing import Dict, Optional
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
-from smg.openni.openni_camera import OpenNICamera
+from smg.openni import OpenNICamera
 from smg.pyorbslam2 import MonocularTracker
 from smg.pyremode import DepthEstimator, MonocularMappingSystem, TemporalKeyframeDepthEstimator
 from smg.pyremode import RGBDOpenNICamera, RGBDroneCamera, RGBFromRGBDImageSource, RGBImageSource
@@ -30,7 +30,8 @@ def main():
     tsdf: Optional[o3d.pipelines.integration.ScalableTSDFVolume] = None
     image_source: Optional[RGBImageSource] = None
     try:
-        # Construct the RGB image source and depth estimator.
+        # Construct the RGB image source.
+        # FIXME: This is duplicate code - factor it out.
         source_type: str = args["source_type"]
         if source_type == "kinect":
             image_source = RGBFromRGBDImageSource(RGBDOpenNICamera(OpenNICamera(mirror_images=True)))
@@ -41,6 +42,7 @@ def main():
             }
             image_source = RGBDroneCamera(DroneFactory.make_drone(source_type, **kwargs[source_type]))
 
+        # Construct the depth estimator.
         depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
             image_source.get_image_dims(), image_source.get_intrinsics(),
             denoising_iterations=400

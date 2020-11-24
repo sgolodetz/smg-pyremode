@@ -80,7 +80,7 @@ def main():
                 # noinspection PyProtectedMember
                 os._exit(0)
 
-    # Destroy any OpenCV windows in existence.
+    # Close any remaining OpenCV windows.
     cv2.destroyAllWindows()
 
     # Denoise and densify the depth image, and visualise the result. Move on once the user presses a key.
