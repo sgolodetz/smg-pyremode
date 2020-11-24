@@ -3,16 +3,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 
+from argparse import ArgumentParser
 from scipy.spatial.transform import Rotation
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from smg.open3d import VisualisationUtil
 from smg.pyopencv import CVMat1b
 from smg.pyorbslam2 import MonocularTracker
-from smg.utility import GeometryUtil
-
 from smg.pyremode import *
 from smg.rotory.drone_factory import DroneFactory
+from smg.utility import GeometryUtil, ImageUtil
 
 
 def print_se3(se3: SE3f) -> None:
@@ -23,7 +23,22 @@ def print_se3(se3: SE3f) -> None:
 
 
 def main():
-    with DroneFactory.make_drone("tello") as drone:
+    # Parse any command-line arguments.
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--drone_type", "-t", type=str, required=True, choices=("ardrone2", "tello"),
+        help="the drone type"
+    )
+    args: dict = vars(parser.parse_args())
+
+    drone_type: str = args.get("drone_type")
+
+    kwargs: Dict[str, dict] = {
+        "ardrone2": dict(print_commands=False, print_control_messages=False, print_navdata_messages=False),
+        "tello": dict(print_commands=False, print_responses=False, print_state_messages=False)
+    }
+
+    with DroneFactory.make_drone(drone_type, **kwargs[drone_type]) as drone:
         with MonocularTracker(
             settings_file=f"settings-tello.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
@@ -41,46 +56,50 @@ def main():
             _, ax = plt.subplots(2, 2)
 
             while True:
+                # Get an RGB image from the drone.
                 colour_image: np.ndarray = drone.get_image()
                 cv2.imshow("Image", colour_image)
                 cv2.waitKey(1)
 
+                # Try to estimate the camera pose. If the tracker's not ready, or pose estimation fails, continue.
                 if not tracker.is_ready():
                     continue
                 pose: Optional[np.ndarray] = tracker.estimate_pose(colour_image)
                 if pose is None:
                     continue
 
+                # Prepare the image and the camera pose to be passed to the depthmap.
+                grey_image: np.ndarray = cv2.cvtColor(colour_image, cv2.COLOR_BGR2GRAY)
+                cv_grey_image: CVMat1b = CVMat1b.zeros(*grey_image.shape[:2])
+                np.copyto(np.array(cv_grey_image, copy=False), grey_image)
+
                 r: Rotation = Rotation.from_matrix(pose[0:3, 0:3])
                 t: np.ndarray = pose[0:3, 3]
                 qx, qy, qz, qw = r.as_quat()
                 se3: SE3f = SE3f(qw, qx, qy, qz, *t)
 
-                # print_se3(se3)
-
-                grey_image: np.ndarray = cv2.cvtColor(colour_image, cv2.COLOR_BGR2GRAY)
-                cv_grey_image: CVMat1b = CVMat1b.zeros(*grey_image.shape[:2])
-                np.copyto(np.array(cv_grey_image, copy=False), grey_image)
-
+                # Pass the image and the camera pose to the depthmap.
                 if reference_colour_image is None:
                     reference_colour_image = colour_image
                     depthmap.set_reference_image(cv_grey_image, se3, 0.1, 4.0)
                 else:
                     depthmap.update(cv_grey_image, se3)
 
+                # Get the estimated depth image and the convergence map.
                 estimated_depth_image: np.ndarray = np.array(depthmap.get_denoised_depthmap())
                 convergence_map: np.ndarray = np.array(depthmap.get_convergence_map())
 
+                # Print out the extent to which the depthmap has currently converged.
                 print(f"Converged: {depthmap.get_converged_percentage()}%")
 
+                # Visualise the progress towards a suitable depth image. Move on once the user presses a key.
                 ax[0, 0].clear()
                 ax[0, 1].clear()
                 ax[1, 0].clear()
                 ax[1, 1].clear()
-                ax[0, 0].imshow(reference_colour_image)
-                ax[0, 1].imshow(estimated_depth_image)  # , vmin=0.0, vmax=4.0)
-                ax[1, 0].imshow(colour_image)
-                # ax[1, 1].imshow(reference_depth_image, vmin=0.0, vmax=4.0)
+                ax[0, 0].imshow(ImageUtil.flip_channels(reference_colour_image))
+                ax[0, 1].imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
+                ax[1, 0].imshow(ImageUtil.flip_channels(colour_image))
 
                 plt.draw()
                 if plt.waitforbuttonpress(0.001):
