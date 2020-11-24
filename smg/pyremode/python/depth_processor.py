@@ -121,6 +121,16 @@ class DepthProcessor:
 
     @staticmethod
     def densify_depth_image(input_depth_image: np.ndarray) -> Tuple[np.ndarray, mtri.Triangulation]:
+        """
+        Densify the specified depth image.
+
+        .. note::
+            The approach used is to construct a Delaunay triangulation of the pixels with known depths and then
+            linearly interpolate the depth values at the triangles' vertices.
+
+        :param input_depth_image:   TODO
+        :return:                    TODO
+        """
         iy, ix = np.nonzero(input_depth_image)
         iz = input_depth_image[(iy, ix)]
         triangulation: mtri.Triangulation = mtri.Triangulation(ix, iy)
@@ -133,7 +143,7 @@ class DepthProcessor:
         maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
         ztri = np.fabs(iz[triangles] - np.roll(iz[triangles], 1, axis=1))
         # triangulation.set_mask((maxi > max_radius) | (np.max(ztri, axis=1) > 0.02))
-        triangulation.set_mask((maxi < 2) | (np.max(ztri, axis=1) > 0.05))
+        triangulation.set_mask(np.max(ztri, axis=1) > 0.05)
 
         oy, ox = np.nonzero(np.ones_like(input_depth_image))
         interpolator: mtri.LinearTriInterpolator = mtri.LinearTriInterpolator(triangulation, iz)

@@ -78,28 +78,14 @@ def main():
             cv2.destroyAllWindows()
 
             # TODO
-            # depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
-            # estimated_depth_image = np.where(depth_mask != 0, estimated_depth_image, 0.0).astype(np.float32)
-            # estimated_depth_image = DepthDenoiser.denoise_depth(estimated_depth_image, intrinsics)
-            # depth_mask = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
             estimated_depth_image = DepthProcessor.denoise_depth(estimated_depth_image, convergence_map, intrinsics)
             estimated_depth_image, _ = DepthProcessor.densify_depth_image(estimated_depth_image)
-            depth_mask: np.ndarray = np.where(estimated_depth_image != 0, 255, 0).astype(np.uint8)
 
             plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
             plt.waitforbuttonpress()
 
-            pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
-                reference_colour_image, estimated_depth_image, depth_mask, intrinsics
-            )
-
-            # Convert the point cloud to Open3D format.
-            pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(pcd_points)
-            pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
-
-            # Visualise the point cloud.
-            VisualisationUtil.visualise_geometry(pcd)
+            # TODO
+            VisualisationUtil.visualise_rgbd_image(reference_colour_image, estimated_depth_image, intrinsics)
 
 
 if __name__ == "__main__":

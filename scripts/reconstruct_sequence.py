@@ -63,7 +63,10 @@ def main():
 
         frame_idx += 1
 
-    grid = o3d.geometry.VoxelGrid.create_from_point_cloud(tsdf.extract_point_cloud(), voxel_size=0.01)
+    # noinspection PyArgumentList
+    grid: o3d.geometry.VoxelGrid = o3d.geometry.VoxelGrid.create_from_point_cloud(
+        tsdf.extract_point_cloud(), voxel_size=0.01
+    )
     VisualisationUtil.visualise_geometry(grid)
 
 
