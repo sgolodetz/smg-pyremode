@@ -1,14 +1,13 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import open3d as o3d
 
 from argparse import ArgumentParser
 from typing import Optional, Tuple
 
 from smg.open3d import VisualisationUtil
 from smg.pyremode import DepthProcessor
-from smg.utility import GeometryUtil, ImageUtil
+from smg.utility import ImageUtil
 
 
 def main():
@@ -37,20 +36,7 @@ def main():
     colour_file: Optional[str] = args.get("colour_file")
     if colour_file is not None:
         colour_image: np.ndarray = cv2.imread(colour_file)
-        depth_mask: np.ndarray = np.where(output_depth_image != 0, 255, 0).astype(np.uint8)
-
-        # TODO
-        pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
-            colour_image, output_depth_image, depth_mask, intrinsics
-        )
-
-        # Convert the point cloud to Open3D format.
-        pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(pcd_points)
-        pcd.colors = o3d.utility.Vector3dVector(pcd_colours)
-
-        # Visualise the point cloud.
-        VisualisationUtil.visualise_geometry(pcd)
+        VisualisationUtil.visualise_rgbd_image(colour_image, output_depth_image, intrinsics)
 
     # TODO
     # ImageUtil.save_depth_image(args["output_depth_file"], output_depth_image)
