@@ -71,7 +71,7 @@ def main():
                 estimated_depth_image: np.ndarray = np.array(depthmap.get_denoised_depthmap())
                 convergence_map: np.ndarray = np.array(depthmap.get_convergence_map())
 
-                print(depthmap.get_converged_percentage())
+                print(f"Converged: {depthmap.get_converged_percentage()}%")
 
                 ax[0, 0].clear()
                 ax[0, 1].clear()
@@ -86,10 +86,10 @@ def main():
                 if plt.waitforbuttonpress(0.001):
                     break
 
-            # TODO
+            # Close any remaining OpenCV windows.
             cv2.destroyAllWindows()
 
-            # TODO
+            # Make a point cloud consisting of only those pixels whose depth has converged.
             depth_mask: np.ndarray = np.where(convergence_map == CONVERGED, 255, 0).astype(np.uint8)
             pcd_points, pcd_colours = GeometryUtil.make_point_cloud(
                 reference_colour_image, estimated_depth_image, depth_mask, (fx, fy, cx, cy)
