@@ -3,7 +3,7 @@ import matplotlib.tri as mtri
 import numpy as np
 import open3d as o3d
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 from smg.pyremode import CONVERGED
 from smg.utility import GeometryUtil
@@ -120,7 +120,7 @@ class DepthProcessor:
         return np.where(np.fabs(dilated_depth_image - converged_depth_image) < 0.02, converged_depth_image, 0.0).astype(np.float32)
 
     @staticmethod
-    def densify_depth_image(input_depth_image: np.ndarray) -> Tuple[np.ndarray, mtri.Triangulation]:
+    def densify_depth_image(input_depth_image: np.ndarray) -> Tuple[np.ndarray, Optional[mtri.Triangulation]]:
         """
         Densify the specified depth image.
 
@@ -133,6 +133,8 @@ class DepthProcessor:
         """
         iy, ix = np.nonzero(input_depth_image)
         iz = input_depth_image[(iy, ix)]
+        if len(iz) < 3:
+            return input_depth_image, None
         triangulation: mtri.Triangulation = mtri.Triangulation(ix, iy)
 
         # See: https://stackoverflow.com/questions/52457964/how-to-deal-with-the-undesired-triangles-that-form-between-the-edges-of-my-geo

@@ -28,8 +28,8 @@ class DepthAssembler:
         """
         self.__image_size: Tuple[int, int] = image_size
         self.__input_colour_image: Optional[np.ndarray] = None
-        self.__input_is_keyframe: bool = True
         self.__input_is_pending: bool = False
+        self.__input_is_reference: bool = True
         self.__input_pose: Optional[np.ndarray] = None
         self.__intrinsics: Tuple[float, float, float, float] = intrinsics
         self.__keyframe_colour_image: Optional[np.ndarray] = None
@@ -161,14 +161,14 @@ class DepthAssembler:
             qx, qy, qz, qw = r.as_quat()
             se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
 
-            # If this is the keyframe:
-            if self.__input_is_keyframe:
+            # If this is the reference input:
+            if self.__input_is_reference:
                 # Store the input colour image and pose for later.
                 self.__keyframe_colour_image = input_colour_image
                 self.__keyframe_pose = input_pose
 
-                # Ensure that no future inputs are treated as the keyframe.
-                self.__input_is_keyframe = False
+                # Ensure that no future inputs are treated as the reference.
+                self.__input_is_reference = False
 
                 # Make the initial REMODE depthmap, setting the input colour image as its reference image.
                 width, height = self.__image_size

@@ -1,15 +1,14 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import open3d as o3d
+import os
 
 from typing import Optional, Tuple
 
 from smg.open3d import VisualisationUtil
 from smg.openni import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import CONVERGED, DepthAssembler, DepthProcessor
-from smg.utility import GeometryUtil
+from smg.pyremode import DepthAssembler, DepthProcessor
 
 
 def main():
@@ -20,7 +19,7 @@ def main():
         ) as tracker:
             intrinsics: Tuple[float, float, float, float] = camera.get_colour_intrinsics()
             depth_assembler: DepthAssembler = DepthAssembler(camera.get_colour_dims(), intrinsics)
-            is_keyframe: bool = True
+            is_reference: bool = True
 
             reference_colour_image: Optional[np.ndarray] = None
             reference_depth_image: Optional[np.ndarray] = None
@@ -30,34 +29,37 @@ def main():
             _, ax = plt.subplots(2, 2)
 
             while True:
-                # TODO
+                # Get an RGB-D image from the camera.
                 colour_image, depth_image = camera.get_images()
                 cv2.imshow("Image", colour_image)
-                cv2.waitKey(1)
+                c: int = cv2.waitKey(1)
+                if c == ord('q'):
+                    break
 
-                # TODO
+                # Try to estimate the camera pose. If the tracker's not ready, or pose estimation fails, continue.
                 if not tracker.is_ready():
                     continue
                 pose: Optional[np.ndarray] = tracker.estimate_pose(colour_image, depth_image)
                 if pose is None:
                     continue
 
-                # TODO
+                # Add the colour image and its estimated pose to the depth assembler.
                 depth_assembler.put(colour_image, pose)
 
-                # TODO
-                if is_keyframe:
+                # If this is the reference input, store the colour and depth images for later, and ensure that
+                # future inputs are not treated as the reference.
+                if is_reference:
                     reference_colour_image = colour_image
                     reference_depth_image = depth_image
-                    is_keyframe = False
+                    is_reference = False
 
-                # TODO
+                # Try to get the latest version of the depth image that's being assembled.
                 result = depth_assembler.get(blocking=False)
                 if result is not None:
                     _, estimated_depth_image, _, converged_percentage, convergence_map = result
-                    print(f"Converged %: {converged_percentage}")
+                    print(f"Converged: {converged_percentage}%")
 
-                # TODO
+                # Visualise the progress towards a suitable depth image. Move on once the user presses a key.
                 ax[0, 0].clear()
                 ax[0, 1].clear()
                 ax[1, 0].clear()
@@ -72,19 +74,32 @@ def main():
                 if plt.waitforbuttonpress(0.001):
                     break
 
-            # TODO
-            cv2.destroyAllWindows()
+            # If ORB-SLAM's not ready yet, forcibly terminate the whole process (this isn't graceful, but
+            # if we don't do it then we may have to wait a very long time for it to finish initialising).
+            if not tracker.is_ready():
+                # noinspection PyProtectedMember
+                os._exit(0)
 
-            # TODO
-            estimated_depth_image = DepthProcessor.denoise_depth(estimated_depth_image, convergence_map, intrinsics)
-            estimated_depth_image, _ = DepthProcessor.densify_depth_image(estimated_depth_image)
+    # Destroy any OpenCV windows in existence.
+    cv2.destroyAllWindows()
 
-            plt.imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
-            plt.waitforbuttonpress()
+    # Denoise and densify the depth image, and visualise the result. Move on once the user presses a key.
+    estimated_depth_image = DepthProcessor.denoise_depth(estimated_depth_image, convergence_map, intrinsics)
+    estimated_depth_image, _ = DepthProcessor.densify_depth_image(estimated_depth_image)
+    ax[0, 1].imshow(estimated_depth_image, vmin=0.0, vmax=4.0)
+    plt.draw()
+    plt.waitforbuttonpress()
 
-            # TODO
-            VisualisationUtil.visualise_rgbd_image(reference_colour_image, estimated_depth_image, intrinsics)
+    # Destroy any PyPlot windows in existence.
+    plt.close("all")
+
+    # Visualise the keyframe as a coloured 3D point cloud.
+    VisualisationUtil.visualise_rgbd_image(reference_colour_image, estimated_depth_image, intrinsics)
 
 
 if __name__ == "__main__":
     main()
+
+    # Make absolutely sure that the application exits - ORB-SLAM's viewer has a tendency to not close cleanly.
+    # noinspection PyProtectedMember
+    os._exit(0)
