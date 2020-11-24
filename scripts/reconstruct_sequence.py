@@ -3,6 +3,7 @@ import numpy as np
 import open3d as o3d
 import os
 
+from argparse import ArgumentParser
 from typing import Tuple
 
 from smg.open3d import ReconstructionUtil, VisualisationUtil
@@ -11,8 +12,17 @@ from smg.utility import ImageUtil, PoseUtil
 
 
 def main():
-    source_type: str = "kinect"
+    # Parse any command-line arguments.
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--source_type", "-t", type=str, required=True, choices=("ardrone2", "kinect", "tello"),
+        help="the source type"
+    )
+    args: dict = vars(parser.parse_args())
 
+    # Set the appropriate settings for the source type.
+    # FIXME: These should ultimately be loaded in rather than hard-coded.
+    source_type: str = args.get("source_type")
     if source_type == "kinect":
         sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-kinect"
         intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
@@ -28,6 +38,7 @@ def main():
     else:
         raise RuntimeError(f"Unknown source type: {source_type}")
 
+    # Make the initial TSDF.
     tsdf: o3d.pipelines.integration.ScalableTSDFVolume = o3d.pipelines.integration.ScalableTSDFVolume(
         voxel_length=0.005,
         sdf_trunc=0.2,
@@ -35,7 +46,10 @@ def main():
     )
 
     frame_idx: int = 0
+
+    # Until we run out of keyframes:
     while True:
+        # Try to load the next keyframe from disk. If there isn't one, early out.
         colour_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.color.png")
         convergence_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.convergence.png")
         depth_filename: str = os.path.join(sequence_dir, f"frame-{frame_idx:06d}.depth.png")
@@ -50,29 +64,34 @@ def main():
         depth_image: np.ndarray = ImageUtil.load_depth_image(depth_filename)
         pose: np.ndarray = np.linalg.inv(PoseUtil.load_pose(pose_filename))
 
+        # Post-process the depth image to reduce noise.
         depth_image = DepthProcessor.postprocess_depth(depth_image, convergence_map, intrinsics)
 
-        # TODO
+        # Visualise the keyframe as a coloured 3D point cloud.
         # VisualisationUtil.visualise_rgbd_image(colour_image, depth_image, intrinsics)
 
-        # TODO
+        # Fuse the keyframe into the TSDF.
         ReconstructionUtil.integrate_frame(
             ImageUtil.flip_channels(colour_image), depth_image, pose, o3d_intrinsics, tsdf
         )
 
-        # mesh: o3d.geometry.TriangleMesh = ReconstructionUtil.make_mesh(tsdf)
-        # VisualisationUtil.visualise_geometry(mesh)
+        # Visualise the current state of the map as a mesh.
+        # VisualisationUtil.visualise_geometry(ReconstructionUtil.make_mesh(tsdf))
 
-        # grid = o3d.geometry.VoxelGrid.create_from_point_cloud(tsdf.extract_point_cloud(), voxel_size=0.01)
-        # VisualisationUtil.visualise_geometry(grid)
+        # Visualise the current state of the map as a voxel grid.
+        # noinspection PyArgumentList
+        # VisualisationUtil.visualise_geometry(o3d.geometry.VoxelGrid.create_from_point_cloud(
+        #     tsdf.extract_point_cloud(), voxel_size=0.01
+        # ))
 
+        # Increment the frame index.
         frame_idx += 1
 
+    # Visualise the final state of the map as a voxel grid.
     # noinspection PyArgumentList
-    grid: o3d.geometry.VoxelGrid = o3d.geometry.VoxelGrid.create_from_point_cloud(
+    VisualisationUtil.visualise_geometry(o3d.geometry.VoxelGrid.create_from_point_cloud(
         tsdf.extract_point_cloud(), voxel_size=0.01
-    )
-    VisualisationUtil.visualise_geometry(grid)
+    ))
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ def main():
     )
     parser.add_argument(
         "--source_type", "-t", type=str, required=True, choices=("ardrone2", "kinect", "tello"),
-        help="the input type"
+        help="the source type"
     )
     args: dict = vars(parser.parse_args())
 
