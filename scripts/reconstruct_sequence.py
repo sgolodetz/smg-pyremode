@@ -24,13 +24,13 @@ def main():
     # FIXME: These should ultimately be loaded in rather than hard-coded.
     source_type: str = args.get("source_type")
     if source_type == "kinect":
-        sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-kinect"
+        sequence_dir: str = "C:/smg-pyremode/output-kinect"
         intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
         o3d_intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(
             640, 480, 532.5694641250893, 531.5410880910171, 320.0, 240.0
         )
     elif source_type == "tello":
-        sequence_dir: str = "C:/spaint/build/bin/apps/spaintgui/sequences/remode-mono"
+        sequence_dir: str = "C:/smg-pyremode/output-tello"
         intrinsics: Tuple[float, float, float, float] = (946.60441222, 941.38386885, 460.29254907, 357.08431882)
         o3d_intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(
             960, 720, 946.60441222, 941.38386885, 460.29254907, 357.08431882
