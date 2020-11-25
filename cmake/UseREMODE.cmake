@@ -2,7 +2,7 @@
 # UseREMODE.cmake #
 ###################
 
-SET(REMODE_ROOT_DIR "${PROJECT_SOURCE_DIR}/../rpg_open_remode" CACHE PATH "The REMODE root directory")
+SET(REMODE_ROOT_DIR "${PROJECT_SOURCE_DIR}/../../rpg_open_remode" CACHE PATH "The REMODE root directory")
 
 SET(REMODE_INCLUDE_DIR "${REMODE_ROOT_DIR}/include")
 
