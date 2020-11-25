@@ -16,6 +16,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         "numpy",
+        "scipy",
         "smg-open3d",
         "smg-openni",
         "smg-pyopencv",
