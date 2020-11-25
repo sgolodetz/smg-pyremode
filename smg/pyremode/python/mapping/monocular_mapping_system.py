@@ -115,7 +115,7 @@ class MonocularMappingSystem:
 
     def __run_mapping(self) -> None:
         """Make a map of the scene based on the keyframes yielded by the depth estimator."""
-        width, height = self.__image_source.get_image_dims()
+        width, height = self.__image_source.get_image_size()
         fx, fy, cx, cy = self.__image_source.get_intrinsics()
         intrinsics: o3d.camera.PinholeCameraIntrinsic = o3d.camera.PinholeCameraIntrinsic(width, height, fx, fy, cx, cy)
 

@@ -19,11 +19,11 @@ class RGBImageSource(ABC):
         pass
 
     @abstractmethod
-    def get_image_dims(self) -> Tuple[int, int]:
+    def get_image_size(self) -> Tuple[int, int]:
         """
-        Get the dimensions of the images.
+        Get the size of the images.
 
-        :return:    The dimensions of the images, as a (width, height) tuple.
+        :return:    The size of the images, as a (width, height) tuple.
         """
         pass
 

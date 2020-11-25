@@ -44,7 +44,7 @@ def main():
 
         # Construct the depth estimator.
         depth_estimator: DepthEstimator = TemporalKeyframeDepthEstimator(
-            image_source.get_image_dims(), image_source.get_intrinsics(),
+            image_source.get_image_size(), image_source.get_intrinsics(),
             denoising_iterations=400
         )
 

@@ -42,7 +42,7 @@ def main():
             settings_file=f"settings-{source_type}.yaml", use_viewer=True,
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
-            image_size: Tuple[int, int] = image_source.get_image_dims()
+            image_size: Tuple[int, int] = image_source.get_image_size()
             intrinsics: Tuple[float, float, float, float] = image_source.get_intrinsics()
             depth_assembler: DepthAssembler = DepthAssembler(image_size, intrinsics)
             is_reference: bool = True

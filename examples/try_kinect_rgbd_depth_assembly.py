@@ -18,7 +18,7 @@ def main():
             voc_file="C:/orbslam2/Vocabulary/ORBvoc.txt", wait_till_ready=False
         ) as tracker:
             intrinsics: Tuple[float, float, float, float] = camera.get_colour_intrinsics()
-            depth_assembler: DepthAssembler = DepthAssembler(camera.get_colour_dims(), intrinsics)
+            depth_assembler: DepthAssembler = DepthAssembler(camera.get_colour_size(), intrinsics)
             is_reference: bool = True
 
             reference_colour_image: Optional[np.ndarray] = None

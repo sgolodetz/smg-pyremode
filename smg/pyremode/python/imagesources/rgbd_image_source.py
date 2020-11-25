@@ -10,20 +10,20 @@ class RGBDImageSource(ABC):
     # PUBLIC ABSTRACT METHODS
 
     @abstractmethod
-    def get_colour_dims(self) -> Tuple[int, int]:
-        """
-        Get the dimensions of the colour images.
-
-        :return:    The dimensions of the colour images, as a (width, height) tuple.
-        """
-        pass
-
-    @abstractmethod
     def get_colour_intrinsics(self) -> Tuple[float, float, float, float]:
         """
         Get the colour camera intrinsics.
 
         :return:    The colour camera intrinsics, as an (fx, fy, cx, cy) tuple.
+        """
+        pass
+
+    @abstractmethod
+    def get_colour_size(self) -> Tuple[int, int]:
+        """
+        Get the size of the colour images.
+
+        :return:    The size of the colour images, as a (width, height) tuple.
         """
         pass
 

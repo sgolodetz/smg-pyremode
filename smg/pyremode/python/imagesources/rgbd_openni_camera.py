@@ -21,14 +21,6 @@ class RGBDOpenNICamera(RGBDImageSource):
 
     # PUBLIC METHODS
 
-    def get_colour_dims(self) -> Tuple[int, int]:
-        """
-        Get the dimensions of the colour images.
-
-        :return:    The dimensions of the colour images, as a (width, height) tuple.
-        """
-        return self.__camera.get_colour_dims()
-
     def get_colour_intrinsics(self) -> Tuple[float, float, float, float]:
         """
         Get the colour camera intrinsics.
@@ -36,6 +28,14 @@ class RGBDOpenNICamera(RGBDImageSource):
         :return:    The colour camera intrinsics, as an (fx, fy, cx, cy) tuple.
         """
         return self.__camera.get_colour_intrinsics()
+
+    def get_colour_size(self) -> Tuple[int, int]:
+        """
+        Get the size of the colour images.
+
+        :return:    The size of the colour images, as a (width, height) tuple.
+        """
+        return self.__camera.get_colour_size()
 
     def get_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
