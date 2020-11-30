@@ -5,11 +5,11 @@ import os
 from argparse import ArgumentParser
 from typing import Dict, Optional
 
+from smg.imagesources import RGBDOpenNICamera, RGBDroneCamera, RGBFromRGBDImageSource, RGBImageSource
 from smg.open3d import ReconstructionUtil, VisualisationUtil
 from smg.openni import OpenNICamera
 from smg.pyorbslam2 import MonocularTracker
 from smg.pyremode import DepthEstimator, MonocularMappingSystem, TemporalKeyframeDepthEstimator
-from smg.pyremode import RGBDOpenNICamera, RGBDroneCamera, RGBFromRGBDImageSource, RGBImageSource
 from smg.rotory.drone_factory import DroneFactory
 
 

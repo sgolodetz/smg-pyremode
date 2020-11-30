@@ -7,9 +7,10 @@ import threading
 
 from typing import Optional
 
+from smg.imagesources import RGBImageSource
 from smg.open3d import ReconstructionUtil
 from smg.pyorbslam2 import MonocularTracker
-from smg.pyremode import CONVERGED, DepthEstimator, RGBImageSource
+from smg.pyremode import CONVERGED, DepthEstimator
 from smg.utility import ImageUtil, PoseUtil
 
 

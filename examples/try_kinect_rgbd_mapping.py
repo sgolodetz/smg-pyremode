@@ -5,10 +5,11 @@ import os
 from argparse import ArgumentParser
 from typing import Optional
 
+from smg.imagesources import RGBDOpenNICamera
 from smg.open3d import ReconstructionUtil, VisualisationUtil
 from smg.openni import OpenNICamera
 from smg.pyorbslam2 import RGBDTracker
-from smg.pyremode import DepthEstimator, RGBDMappingSystem, RGBDOpenNICamera, TemporalKeyframeDepthEstimator
+from smg.pyremode import DepthEstimator, RGBDMappingSystem, TemporalKeyframeDepthEstimator
 
 
 def main():
