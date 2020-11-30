@@ -19,7 +19,6 @@ setuptools.setup(
         "scipy",
         "smg-imagesources",
         "smg-open3d",
-        "smg-openni",
         "smg-pyopencv",
         "smg-pyorbslam2",
         "smg-utility"
