@@ -17,10 +17,11 @@ setuptools.setup(
     install_requires=[
         "numpy",
         "scipy",
-        "smg-imagesources",
         "smg-open3d",
+        "smg-openni",
         "smg-pyopencv",
         "smg-pyorbslam2",
+        "smg-rotory",
         "smg-utility"
     ],
     classifiers=[

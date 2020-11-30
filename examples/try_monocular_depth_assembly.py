@@ -6,12 +6,13 @@ import os
 from argparse import ArgumentParser
 from typing import Dict, Optional, Tuple
 
-from smg.imagesources import RGBDOpenNICamera, RGBDroneCamera, RGBFromRGBDImageSource, RGBImageSource
+from smg.imagesources import RGBFromRGBDImageSource, RGBImageSource
 from smg.open3d import VisualisationUtil
-from smg.openni import OpenNICamera
+from smg.openni import OpenNICamera, RGBDOpenNICamera
 from smg.pyorbslam2 import MonocularTracker
 from smg.pyremode import DepthAssembler, DepthProcessor
 from smg.rotory.drone_factory import DroneFactory
+from smg.rotory.rgb_drone_camera import RGBDroneCamera
 
 
 def main():
