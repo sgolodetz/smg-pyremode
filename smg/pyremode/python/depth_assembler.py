@@ -3,12 +3,13 @@ import numpy as np
 import threading
 
 import smg.pyopencv as pyopencv
-import smg.pyremode as pyremode
 
 from scipy.spatial.transform import Rotation
 from typing import Optional, Tuple
 
 from smg.utility import GeometryUtil
+
+from ..cpp.pyremode import Depthmap, SE3f
 
 
 class DepthAssembler:
@@ -135,7 +136,7 @@ class DepthAssembler:
 
     def __assemble_depth_image(self) -> None:
         """Assemble the depth image from any input colour images and poses that are passed to the assembler."""
-        depthmap: Optional[pyremode.Depthmap] = None
+        depthmap: Optional[Depthmap] = None
 
         # Until the assembler is told to terminate:
         while not self.__should_terminate:
@@ -161,7 +162,7 @@ class DepthAssembler:
             r: Rotation = Rotation.from_matrix(input_pose[0:3, 0:3])
             t: np.ndarray = input_pose[0:3, 3]
             qx, qy, qz, qw = r.as_quat()
-            se3: pyremode.SE3f = pyremode.SE3f(qw, qx, qy, qz, *t)
+            se3: SE3f = SE3f(qw, qx, qy, qz, *t)
 
             # If this is the reference input:
             if self.__input_is_reference:
@@ -175,7 +176,7 @@ class DepthAssembler:
                 # Make the initial REMODE depthmap, setting the input colour image as its reference image.
                 width, height = self.__image_size
                 fx, fy, cx, cy = self.__intrinsics
-                depthmap = pyremode.Depthmap(width, height, fx, cx, fy, cy)
+                depthmap = Depthmap(width, height, fx, cx, fy, cy)
                 depthmap.set_reference_image(cv_grey_image, se3, self.__min_depth, self.__max_depth)
             else:
                 # Otherwise, use the inputs to update the existing REMODE depthmap.

@@ -5,8 +5,9 @@ import open3d as o3d
 
 from typing import Optional, Tuple
 
-from smg.pyremode import CONVERGED
 from smg.utility import GeometryUtil
+
+from ..cpp.pyremode import CONVERGED
 
 
 class DepthProcessor:

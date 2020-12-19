@@ -3,7 +3,8 @@ import threading
 
 from typing import Optional, Tuple
 
-from smg.pyremode import DepthAssembler, DepthEstimator
+from .depth_assembler import DepthAssembler
+from .depth_estimator import DepthEstimator
 
 
 class TemporalKeyframeDepthEstimator(DepthEstimator):
